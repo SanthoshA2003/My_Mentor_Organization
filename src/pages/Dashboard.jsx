@@ -24,7 +24,7 @@ import {
   Activity,
   Building2,
   CheckCircle2,
-  Clock3,
+
   Target,
   TrendingDown,
 } from "lucide-react";

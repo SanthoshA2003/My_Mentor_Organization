@@ -5,8 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { KPICard, StatusBadge, CardsSkeleton, scoreColor } from "@/components/common";
-import { Download, TrendingDown, FileText, Briefcase, Filter } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { cn } from "@/lib/utils";
 
 const funnelColors = ["#1e5bff", "#2b6bff", "#17a2c7", "#17b6c7", "#14b8a6", "#22c55e", "#16a34a"];
