@@ -271,10 +271,10 @@
 
     console.log("Create User Payload:", payload);
 
-    const { data } = await api.post(
-      "/organizations/me/members",
-      payload
-    );
+   const { data } = await api.post(
+  "/users",
+  payload
+);
 
     console.log(
       "Create Organization Member API:",

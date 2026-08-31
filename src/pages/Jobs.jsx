@@ -67,6 +67,16 @@
 </Button>
         </div>
 
+<Button
+  data-testid="new-job-btn"
+  onClick={() => navigate("/jobs/new")}
+  className="bg-[#1e5bff] hover:bg-[#154cdb] transition-colors duration-200"
+>
+  <Plus className="h-4 w-4 mr-2" />
+  New Job Description
+</Button>      </div>
+
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KPICard testId="job-kpi-total" label="Total Jobs" value={jobs?.length || 0} icon={Briefcase} />
           <KPICard testId="job-kpi-draft" label="Draft" value={counts.draft || 0} icon={Layers} accent="text-slate-500" />

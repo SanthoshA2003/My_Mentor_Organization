@@ -111,26 +111,14 @@ export function AuthProvider({ children }) {
       const data = response.data;
 
       console.log("ADMIN LOGIN RESPONSE:", data);
-      console.log("LOGIN STATUS:", response.status);
 
-      /* --------------------------------------------------------
-         2. GET TOKEN
-      -------------------------------------------------------- */
-
-      const token = data?.token || data?.access_token;
-
-      console.log("TOKEN RECEIVED:", !!token);
-
-      if (!token) {
+      if (!data.token) {
         throw new Error(
-          "Login successful but token was not returned by the API."
+          "Login successful but token was not returned."
         );
       }
 
-      /* --------------------------------------------------------
-         3. REMOVE OLD TOKENS
-      -------------------------------------------------------- */
-
+      // Remove old tokens
       localStorage.removeItem("mm_token");
       sessionStorage.removeItem("mm_token");
 
@@ -139,12 +127,12 @@ export function AuthProvider({ children }) {
       -------------------------------------------------------- */
 
       if (remember) {
-        localStorage.setItem("mm_token", token);
-        console.log("TOKEN SAVED TO LOCAL STORAGE");
+        localStorage.setItem("mm_token", data.token);
       } else {
-        sessionStorage.setItem("mm_token", token);
-        console.log("TOKEN SAVED TO SESSION STORAGE");
+        sessionStorage.setItem("mm_token", data.token);
       }
+
+      console.log("TOKEN SAVED");
 
       /* --------------------------------------------------------
          5. GET CURRENT LOGGED-IN USER
