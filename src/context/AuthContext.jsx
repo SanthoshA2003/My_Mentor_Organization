@@ -15,13 +15,16 @@ export function AuthProvider({ children }) {
   const [org, setOrg] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Get currently logged-in admin
+  /* ============================================================
+     LOAD CURRENT USER
+  ============================================================ */
+
   const loadMe = useCallback(async () => {
     const token =
       localStorage.getItem("mm_token") ||
       sessionStorage.getItem("mm_token");
 
-    console.log("Token exists:", !!token);
+    console.log("LOAD ME - TOKEN EXISTS:", !!token);
 
     if (!token) {
       setUser(null);
@@ -37,10 +40,25 @@ export function AuthProvider({ children }) {
 
       const data = response.data;
 
-      // Support API response
-      // { user: {...}, organization: {...} }
-      const currentUser = data.user || data;
-      const organization = data.organization || null;
+      /*
+        Support both:
+
+        {
+          "user": {...},
+          "organization": {...}
+        }
+
+        OR
+
+        {
+          "id": "...",
+          "name": "...",
+          ...
+        }
+      */
+
+      const currentUser = data?.user || data;
+      const organization = data?.organization || null;
 
       console.log("CURRENT USER:", currentUser);
       console.log("ORGANIZATION:", organization);
@@ -49,8 +67,8 @@ export function AuthProvider({ children }) {
       setOrg(organization);
     } catch (error) {
       console.error("AUTH ME ERROR:", error);
-      console.error("Status:", error.response?.status);
-      console.error("Response:", error.response?.data);
+      console.error("STATUS:", error.response?.status);
+      console.error("RESPONSE:", error.response?.data);
 
       localStorage.removeItem("mm_token");
       sessionStorage.removeItem("mm_token");
@@ -62,14 +80,28 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  /* ============================================================
+     INITIAL AUTH CHECK
+  ============================================================ */
+
   useEffect(() => {
     loadMe();
   }, [loadMe]);
 
-  // Admin Login
+  /* ============================================================
+     ADMIN LOGIN
+  ============================================================ */
+
   const login = async (email, password, remember = true) => {
     try {
+      console.log("=================================");
       console.log("ADMIN LOGIN START");
+      console.log("EMAIL:", email);
+      console.log("=================================");
+
+      /* --------------------------------------------------------
+         1. LOGIN API
+      -------------------------------------------------------- */
 
       const response = await api.post("/auth/admin/login", {
         email,
@@ -79,27 +111,50 @@ export function AuthProvider({ children }) {
       const data = response.data;
 
       console.log("ADMIN LOGIN RESPONSE:", data);
+      console.log("LOGIN STATUS:", response.status);
 
-      if (!data.token) {
+      /* --------------------------------------------------------
+         2. GET TOKEN
+      -------------------------------------------------------- */
+
+      const token = data?.token || data?.access_token;
+
+      console.log("TOKEN RECEIVED:", !!token);
+
+      if (!token) {
         throw new Error(
-          "Login successful but token was not returned."
+          "Login successful but token was not returned by the API."
         );
       }
 
-      // Remove old tokens
+      /* --------------------------------------------------------
+         3. REMOVE OLD TOKENS
+      -------------------------------------------------------- */
+
       localStorage.removeItem("mm_token");
       sessionStorage.removeItem("mm_token");
 
-      // Save token
+      /* --------------------------------------------------------
+         4. SAVE NEW TOKEN
+      -------------------------------------------------------- */
+
       if (remember) {
-        localStorage.setItem("mm_token", data.token);
+        localStorage.setItem("mm_token", token);
+        console.log("TOKEN SAVED TO LOCAL STORAGE");
       } else {
-        sessionStorage.setItem("mm_token", data.token);
+        sessionStorage.setItem("mm_token", token);
+        console.log("TOKEN SAVED TO SESSION STORAGE");
       }
 
-      console.log("TOKEN SAVED");
+      /* --------------------------------------------------------
+         5. GET CURRENT LOGGED-IN USER
+         
+         IMPORTANT:
+         This is the missing part in your current code.
+      -------------------------------------------------------- */
 
-      // Get current logged-in user
+      console.log("CALLING /auth/me...");
+
       const meResponse = await api.get("/auth/me");
 
       console.log(
@@ -109,28 +164,59 @@ export function AuthProvider({ children }) {
 
       const meData = meResponse.data;
 
-      const currentUser = meData.user || meData;
-      const organization = meData.organization || null;
+      /* --------------------------------------------------------
+         6. EXTRACT USER
+      -------------------------------------------------------- */
 
-      console.log("SETTING USER:", currentUser);
-      console.log("SETTING ORGANIZATION:", organization);
+      const currentUser =
+        meData?.user || meData;
+
+      const organization =
+        meData?.organization || null;
+
+      console.log(
+        "CURRENT USER AFTER LOGIN:",
+        currentUser
+      );
+
+      console.log(
+        "ORGANIZATION AFTER LOGIN:",
+        organization
+      );
+
+      /* --------------------------------------------------------
+         7. SAVE USER TO REACT STATE
+      -------------------------------------------------------- */
 
       setUser(currentUser);
       setOrg(organization);
 
+      console.log("USER STATE UPDATED");
+      console.log("LOGIN COMPLETE");
+
       return {
         ...data,
+        token,
         user: currentUser,
         organization,
       };
     } catch (error) {
-      console.error("ADMIN LOGIN ERROR:", error);
-      console.error("Status:", error.response?.status);
-      console.error("Response:", error.response?.data);
+      console.error("=================================");
+      console.error("ADMIN LOGIN ERROR");
+      console.error("=================================");
+
+      console.error("ERROR:", error);
+      console.error("STATUS:", error.response?.status);
+      console.error("RESPONSE:", error.response?.data);
+      console.error("MESSAGE:", error.message);
 
       throw error;
     }
   };
+
+  /* ============================================================
+     LOGOUT
+  ============================================================ */
 
   const logout = async () => {
     try {
@@ -146,8 +232,16 @@ export function AuthProvider({ children }) {
     setOrg(null);
   };
 
+  /* ============================================================
+     PERMISSIONS
+  ============================================================ */
+
   const can = (perm) =>
     (user?.permissions || []).includes(perm);
+
+  /* ============================================================
+     PROVIDER
+  ============================================================ */
 
   return (
     <AuthContext.Provider
