@@ -99,40 +99,50 @@ export default function Dashboard() {
      LOAD DASHBOARD
   ========================================================== */
 
-  const load = async () => {
-    setError(false);
+ const load = async () => {
+  setError(false);
 
-    try {
-      const [
-        dashboardResponse,
-        recruitmentResponse,
-      ] = await Promise.all([
-        api.get("/organizations/me/dashboard"),
-        api.get("/organizations/me/analytics/recruitment"),
-      ]);
+  try {
+    const [
+      dashboardResponse,
+      recruitmentResponse,
+      jobsResponse,
+    ] = await Promise.all([
+      api.get("/organizations/me/dashboard"),
+      api.get("/organizations/me/analytics/recruitment"),
+      api.get("/organizations/me/jobs"),
+    ]);
 
-      console.log(
-        "Organization Dashboard API:",
-        dashboardResponse.data
-      );
+    console.log(
+      "Organization Dashboard API:",
+      dashboardResponse.data
+    );
 
-      console.log(
-        "Recruitment Analytics API:",
-        recruitmentResponse.data
-      );
+    console.log(
+      "Recruitment Analytics API:",
+      recruitmentResponse.data
+    );
 
-      setData({
-        organization: dashboardResponse.data || {},
-        recruitment: recruitmentResponse.data || {},
-      });
-    } catch (err) {
-      console.error("Dashboard API error:", err);
-      console.error("Status:", err.response?.status);
-      console.error("Response:", err.response?.data);
+    console.log(
+      "Organization Jobs API:",
+      jobsResponse.data
+    );
 
-      setError(true);
-    }
-  };
+    setData({
+      organization: dashboardResponse.data || {},
+      recruitment: recruitmentResponse.data || {},
+      jobs: Array.isArray(jobsResponse.data)
+        ? jobsResponse.data
+        : [],
+    });
+  } catch (err) {
+    console.error("Dashboard API error:", err);
+    console.error("Status:", err.response?.status);
+    console.error("Response:", err.response?.data);
+
+    setError(true);
+  }
+};
 
   useEffect(() => {
     load();
@@ -171,7 +181,8 @@ export default function Dashboard() {
   ========================================================== */
 
   const organization = data.organization || {};
-  const recruitment = data.recruitment || {};
+const recruitment = data.recruitment || {};
+const organizationJobs = data.jobs || {};
 
   const stats = organization.stats || {};
 
@@ -362,12 +373,9 @@ export default function Dashboard() {
      recruitment.jobs.items
   ========================================================== */
 
-  const jobOverview =
-    recruitment.job_overview ||
-    organization.job_overview ||
-    jobs.list ||
-    jobs.items ||
-    [];
+ const jobOverview = organizationJobs.filter(
+  (job) => job.status === "open"
+);
 
   /* ==========================================================
      RECENT ACTIVITY
@@ -740,166 +748,137 @@ export default function Dashboard() {
       </section>
 
       {/* ======================================================
-          ACTIVE JOBS OVERVIEW
-      ====================================================== */}
+    ACTIVE JOBS OVERVIEW
+====================================================== */}
 
-      <section>
-        <Card
-          className="border-slate-200 shadow-sm overflow-hidden"
-          data-testid="job-overview"
-        >
-          <div className="p-5 border-b border-slate-100">
-            <h3 className="font-display font-bold text-lg text-[#0a2540]">
-              Active Jobs Overview
-            </h3>
-          </div>
+<section>
+  <Card
+    className="border-slate-200 shadow-sm overflow-hidden"
+    data-testid="job-overview"
+  >
+    <div className="p-5 border-b border-slate-100">
+      <h3 className="font-display font-bold text-lg text-[#0a2540]">
+        Active Jobs Overview
+      </h3>
+    </div>
 
-          {jobOverview.length === 0 ? (
+    {jobOverview.length === 0 ? (
+      <EmptyState
+        icon={Briefcase}
+        title="No active jobs"
+        description="There are no active jobs available."
+      />
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-500">
+            <tr className="text-left">
+              {[
+                "Job Title",
+                "Department",
+                "Location",
+                "Applications",
+                "Matched",
+                "Shortlisted",
+                "Interviews",
+                "Selected",
+                "Status",
+                "",
+              ].map((header) => (
+                <th
+                  key={header}
+                  className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap"
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-            <EmptyState
-              icon={Briefcase}
-              title="No active jobs"
-              description="Job overview data is not available yet."
-            />
+          <tbody>
+            {jobOverview.map((job) => (
+              <tr
+                key={job.id}
+                className="border-t border-slate-100 hover:bg-slate-50"
+              >
+                {/* Job Title */}
+                <td className="px-4 py-3 font-medium text-[#0a2540] whitespace-nowrap">
+                  {job.title || ""}
+                </td>
 
-          ) : (
+                {/* Department
+                    Not available from current API
+                */}
+                <td className="px-4 py-3 text-slate-600">
+                  {job.department || ""}
+                </td>
 
-            <div className="overflow-x-auto">
+                {/* Location */}
+                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                  {job.location || ""}
+                </td>
 
-              <table className="w-full text-sm">
+                {/* Applications */}
+                <td className="px-4 py-3">
+                  {job.applicants ?? ""}
+                </td>
 
-                <thead className="bg-slate-50 text-slate-500">
+                {/* Matched
+                    Not available from current API
+                */}
+                <td className="px-4 py-3">
+                  {job.matched ?? ""}
+                </td>
 
-                  <tr className="text-left">
+                {/* Shortlisted
+                    Not available from current API
+                */}
+                <td className="px-4 py-3">
+                  {job.shortlisted ?? ""}
+                </td>
 
-                    {[
-                      "Job Title",
-                      "Department",
-                      "Location",
-                      "Applications",
-                      "Matched",
-                      "Shortlisted",
-                      "Interviews",
-                      "Selected",
-                      "Status",
-                      "",
-                    ].map((header) => (
+                {/* Interviews
+                    Not available from current API
+                */}
+                <td className="px-4 py-3">
+                  {job.interviews ?? ""}
+                </td>
 
-                      <th
-                        key={header}
-                        className="px-4 py-3 font-semibold text-xs uppercase tracking-wide"
-                      >
-                        {header}
-                      </th>
+                {/* Selected
+                    Not available from current API
+                */}
+                <td className="px-4 py-3">
+                  {job.selected ?? ""}
+                </td>
 
-                    ))}
+                {/* Status */}
+                <td className="px-4 py-3">
+                  {job.status ? (
+                    <StatusBadge status={job.status} />
+                  ) : (
+                    ""
+                  )}
+                </td>
 
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {jobOverview.map((job) => (
-
-                    <tr
-                      key={
-                        job.id ||
-                        job.job_id ||
-                        job.title
-                      }
-                      className="border-t border-slate-100 hover:bg-slate-50"
-                    >
-
-                      <td className="px-4 py-3 font-medium text-[#0a2540]">
-                        {job.title ||
-                          job.job_title ||
-                          "-"}
-                      </td>
-
-                      <td className="px-4 py-3 text-slate-600">
-                        {job.department || "-"}
-                      </td>
-
-                      <td className="px-4 py-3 text-slate-600">
-                        {job.location || "-"}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {numberValue(
-                          job.applications
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {numberValue(
-                          job.matched
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {numberValue(
-                          job.shortlisted
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {numberValue(
-                          job.interviews
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {numberValue(
-                          job.selected
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {job.status ? (
-                          <StatusBadge
-                            status={job.status}
-                          />
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-
-                        {(job.id ||
-                          job.job_id) && (
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/jobs/${
-                                  job.id ||
-                                  job.job_id
-                                }`
-                              )
-                            }
-                            className="text-[#1e5bff] font-medium hover:underline"
-                          >
-                            View Job
-                          </button>
-                        )}
-
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-          )}
-
-        </Card>
-      </section>
+                {/* View Job */}
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() =>
+                      navigate(`/jobs/${job.id}`)
+                    }
+                    className="text-[#1e5bff] font-medium hover:underline whitespace-nowrap"
+                  >
+                    View Job
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </Card>
+</section>
 
       {/* ======================================================
           RECENT ACTIVITY

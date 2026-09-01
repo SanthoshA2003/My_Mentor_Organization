@@ -42,11 +42,35 @@
     const duplicate = async (job) => { await api.post(`/jobs/${job.id}/duplicate`); toast.success("Job duplicated as draft"); load(); };
 
     const depts = [...new Set((jobs || []).map((j) => j.department).filter(Boolean))];
-    const filtered = (jobs || []).filter((j) =>
-      `${j.title} ${j.department} ${j.location}`.toLowerCase().includes(q.toLowerCase()) &&
-      (statusF === "all" || j.status === statusF) &&
-      (deptF === "all" || j.department === deptF)
-    );
+   const filtered = (jobs || []).filter((j) => {
+  const searchText =
+    `${j.title || ""} ${j.department || ""} ${j.location || ""}`.toLowerCase();
+
+  const matchesSearch = searchText.includes(q.toLowerCase());
+
+  let matchesStatus = true;
+
+  if (statusF !== "all") {
+    if (statusF === "active") {
+      // API currently uses "open" or "active"
+      matchesStatus =
+        j.status === "open" ||
+        j.status === "active";
+    } else {
+      matchesStatus = j.status === statusF;
+    }
+  }
+
+  const matchesDepartment =
+    deptF === "all" ||
+    j.department === deptF;
+
+  return (
+    matchesSearch &&
+    matchesStatus &&
+    matchesDepartment
+  );
+});
 
     const counts = (jobs || []).reduce((a, j) => { a[j.status] = (a[j.status] || 0) + 1; return a; }, {});
 
@@ -87,33 +111,67 @@
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input data-testid="jobs-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search jobs..." className="pl-9" />
           </div>
-          <Select value={statusF} onValueChange={setStatusF}>
-    <SelectTrigger
-      data-testid="jobs-status-filter"
-      className="w-36"
-    >
-      <SelectValue placeholder="Status" />
-    </SelectTrigger>
+       <Select value={statusF} onValueChange={setStatusF}>
+  <SelectTrigger
+    data-testid="jobs-status-filter"
+    className="w-36"
+  >
+    <SelectValue placeholder="Status" />
+  </SelectTrigger>
 
-    <SelectContent>
-      {["all", "open", "closed"].map((s) => (
-        <SelectItem
-          key={s}
-          value={s}
-          className="capitalize"
-        >
-          {s === "all"
-            ? "All Status"
-            : s === "open"
-            ? "Open"
-            : "Closed"}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-          <Select value={deptF} onValueChange={setDeptF}><SelectTrigger data-testid="jobs-dept-filter" className="w-40"><SelectValue placeholder="Department" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Departments</SelectItem>{depts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-          </Select>
+  <SelectContent>
+    <SelectItem value="all">
+      All Status
+    </SelectItem>
+
+    <SelectItem value="draft">
+      Draft
+    </SelectItem>
+
+    <SelectItem value="active">
+      Active
+    </SelectItem>
+
+    <SelectItem value="paused">
+      Paused
+    </SelectItem>
+
+    <SelectItem value="closed">
+      Closed
+    </SelectItem>
+
+    <SelectItem value="filled">
+      Filled
+    </SelectItem>
+  </SelectContent>
+</Select>
+         <Select
+  value={deptF}
+  onValueChange={setDeptF}
+>
+  <SelectTrigger
+    data-testid="jobs-dept-filter"
+    className="w-40"
+  >
+    <SelectValue placeholder="Department" />
+  </SelectTrigger>
+
+  <SelectContent>
+    <SelectItem value="all">
+      All Departments
+    </SelectItem>
+
+    {depts.map((d) => (
+      <SelectItem
+        key={d}
+        value={d}
+      >
+        {d}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
         </div>
 
         <Card className="border-slate-200 shadow-sm overflow-hidden" data-testid="jobs-table">

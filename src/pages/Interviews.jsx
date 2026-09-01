@@ -17,7 +17,22 @@ export default function Interviews() {
   const [active, setActive] = useState(null);
   const [fb, setFb] = useState({ overall_rating: 4, technical_rating: 4, communication_rating: 4, problem_solving_rating: 4, role_suitability: "High", strengths: "", concerns: "", written_feedback: "", recommendation: "Hire" });
 
-  const load = () => api.get("/interviews").then((r) => setIvs(r.data)).catch(() => setIvs([]));
+ const load = async () => {
+  try {
+    const response = await api.get("/organizations/me/interviews");
+
+    console.log("Organization Interviews API:", response.data);
+
+    setIvs(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error("Organization Interviews API error:", error);
+    console.error("Status:", error.response?.status);
+    console.error("Response:", error.response?.data);
+
+    setIvs([]);
+  }
+};
+
   useEffect(() => { load(); }, []);
 
   const submit = async () => {
@@ -43,21 +58,72 @@ export default function Interviews() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-500"><tr className="text-left">{["Candidate", "Job", "Type", "Interviewer", "Scheduled", "Status", ""].map((h) => <th key={h} className="px-4 py-3 font-semibold text-xs uppercase">{h}</th>)}</tr></thead>
-              <tbody>
-                {ivs.map((iv) => (
-                  <tr key={iv.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-[#0a2540]">{iv.candidate_name}</td>
-                    <td className="px-4 py-3 text-slate-600">{iv.job_title}</td>
-                    <td className="px-4 py-3 text-slate-600">{iv.interview_type}</td>
-                    <td className="px-4 py-3 text-slate-600">{iv.interviewer_name}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{iv.scheduled_at ? new Date(iv.scheduled_at).toLocaleString() : "—"}</td>
-                    <td className="px-4 py-3"><StatusBadge status={iv.status === "completed" ? "filled" : "active"} /></td>
-                    <td className="px-4 py-3">
-                      <Button size="sm" variant="outline" data-testid={`feedback-btn-${iv.id}`} onClick={() => { setActive(iv); if (iv.feedback) setFb(iv.feedback); }}>{iv.feedback ? "View Feedback" : "Add Feedback"}</Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+            <tbody>
+  {ivs.map((iv) => (
+    <tr
+      key={iv.id}
+      className="border-t border-slate-100 hover:bg-slate-50"
+    >
+      {/* Candidate */}
+      <td className="px-4 py-3 font-medium text-[#0a2540]">
+        {iv.candidate_name || "—"}
+      </td>
+
+      {/* Job */}
+      <td className="px-4 py-3 text-slate-600">
+        {iv.job_title || "—"}
+      </td>
+
+      {/* Type */}
+      <td className="px-4 py-3 text-slate-600">
+        {iv.interview_type || "—"}
+      </td>
+
+      {/* Interviewer */}
+      <td className="px-4 py-3 text-slate-600">
+        {iv.interviewer_name || "—"}
+      </td>
+
+      {/* Scheduled */}
+      <td className="px-4 py-3 text-slate-500 text-xs">
+        {iv.scheduled_at
+          ? new Date(iv.scheduled_at).toLocaleString()
+          : "—"}
+      </td>
+
+      {/* Status */}
+      <td className="px-4 py-3">
+        <StatusBadge
+          status={
+            iv.status === "completed"
+              ? "filled"
+              : iv.status || "active"
+          }
+        />
+      </td>
+
+      {/* Feedback */}
+      <td className="px-4 py-3">
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid={`feedback-btn-${iv.id}`}
+          onClick={() => {
+            setActive(iv);
+
+            if (iv.feedback) {
+              setFb(iv.feedback);
+            }
+          }}
+        >
+          {iv.feedback
+            ? "View Feedback"
+            : "Add Feedback"}
+        </Button>
+      </td>
+    </tr>
+  ))}
+</tbody>
             </table>
           </div>
         )}
