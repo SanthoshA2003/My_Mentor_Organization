@@ -56,18 +56,15 @@
     ROLE LABELS
   ============================================================ */
 
-  const ROLE_LABELS = {
-    company_admin: "Company Admin",
-    organization_member: "Organization Member",
-
-    // Keep these in case backend returns them later
-    org_admin: "Organization Admin",
-    hr_admin: "HR Admin",
-    recruiter: "Recruiter",
-    hiring_manager: "Hiring Manager",
-    interviewer: "Interviewer",
-    viewer: "Viewer / Management",
-  };
+const ROLE_LABELS = {
+  company_admin: "Company Admin",
+  organization_admin: "Organization Admin",
+  hr_admin: "HR Admin",
+  recruiter: "Recruiter",
+  hiring_manager: "Hiring Manager",
+  interviewer: "Interviewer",
+  viewer: "Viewer / Management",
+};
 
   /* ============================================================
     ROLE FORMATTER
@@ -145,7 +142,8 @@
   phone: "",
   department: "",
   designation: "",
-  role: "organization_member",
+  role: "recruiter",
+  password: "",
 });
 
     const [saving, setSaving] = useState(false);
@@ -252,7 +250,7 @@
       Existing POST API is kept.
     ========================================================== */
 
- const createUser = async () => {
+const createUser = async () => {
   setSaving(true);
 
   try {
@@ -260,14 +258,17 @@
       .trim()
       .replace(/\s+/g, " ");
 
-    const payload = {
-      name,
-      email: form.email,
-      phone: form.phone || null,
-      department: form.department || null,
-      designation: form.designation || null,
-      role: form.role,
-    };
+  
+
+  const payload = {
+  name: name,
+  email: form.email,
+  phone: form.phone || "",
+  department: form.department || "",
+  designation: form.designation || "",
+  role: form.role,
+  password: form.password,
+};
 
     console.log("Create User Payload:", payload);
 
@@ -285,15 +286,15 @@
 
     await load();
 
-    setForm({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      department: "",
-      designation: "",
-      role: "organization_member",
-    });
+   setForm({
+  first_name: "",
+  last_name: "",
+  email: "",
+  phone: "",
+  department: "",
+  designation: "",
+  role: "recruiter",
+});
 
     setOpen(false);
 
@@ -620,6 +621,26 @@
     />
   </div>
 
+  {/* Password */}
+
+<div className="space-y-1 col-span-2">
+  <Label>Password</Label>
+
+  <Input
+    data-testid="user-password-input"
+    type="password"
+    name="new-password"
+    autoComplete="new-password"
+    value={form.password}
+    onChange={(event) =>
+      setForm({
+        ...form,
+        password: event.target.value,
+      })
+    }
+    placeholder=""
+  />
+</div>
 
   {/* Phone */}
 
@@ -677,31 +698,51 @@
   <div className="space-y-1">
     <Label>Role</Label>
 
-    <Select
-      value={form.role}
-      onValueChange={(value) =>
-        setForm({
-          ...form,
-          role: value,
-        })
-      }
-    >
-      <SelectTrigger data-testid="user-role-select">
-        <SelectValue />
-      </SelectTrigger>
+  <Select
+  value={form.role}
+  onValueChange={(value) =>
+    setForm({
+      ...form,
+      role: value,
+    })
+  }
+>
+  <SelectTrigger data-testid="user-role-select">
+    <SelectValue placeholder="Select Role" />
+  </SelectTrigger>
 
-      <SelectContent>
+  <SelectContent>
 
-        <SelectItem value="organization_member">
-          Organization Member
-        </SelectItem>
+  <SelectItem value="company_admin">
+    Company Admin
+  </SelectItem>
 
-        <SelectItem value="company_admin">
-          Company Admin
-        </SelectItem>
+  <SelectItem value="organization_admin">
+    Organization Admin
+  </SelectItem>
 
-      </SelectContent>
-    </Select>
+  <SelectItem value="hr_admin">
+    HR Admin
+  </SelectItem>
+
+  <SelectItem value="recruiter">
+    Recruiter
+  </SelectItem>
+
+  <SelectItem value="hiring_manager">
+    Hiring Manager
+  </SelectItem>
+
+  <SelectItem value="interviewer">
+    Interviewer
+  </SelectItem>
+
+  <SelectItem value="viewer">
+    Viewer / Management
+  </SelectItem>
+
+</SelectContent>
+</Select>
   </div>
 
 </div>
@@ -718,10 +759,11 @@
     data-testid="create-user-btn"
     onClick={createUser}
     disabled={
-      saving ||
-      !form.first_name ||
-      !form.email
-    }
+  saving ||
+  !form.first_name ||
+  !form.email ||
+  !form.password
+}
     className="bg-[#1e5bff] hover:bg-[#154cdb]"
   >
     {saving ? "Creating..." : "Create User"}

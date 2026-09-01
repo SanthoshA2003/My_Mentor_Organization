@@ -103,38 +103,16 @@ export default function Dashboard() {
   setError(false);
 
   try {
-    const [
-      dashboardResponse,
-      recruitmentResponse,
-      jobsResponse,
-    ] = await Promise.all([
-      api.get("/organizations/me/dashboard"),
-      api.get("/organizations/me/analytics/recruitment"),
-      api.get("/organizations/me/jobs"),
-    ]);
+    const dashboardResponse = await api.get(
+      "/organizations/me/dashboard"
+    );
 
     console.log(
       "Organization Dashboard API:",
       dashboardResponse.data
     );
 
-    console.log(
-      "Recruitment Analytics API:",
-      recruitmentResponse.data
-    );
-
-    console.log(
-      "Organization Jobs API:",
-      jobsResponse.data
-    );
-
-    setData({
-      organization: dashboardResponse.data || {},
-      recruitment: recruitmentResponse.data || {},
-      jobs: Array.isArray(jobsResponse.data)
-        ? jobsResponse.data
-        : [],
-    });
+    setData(dashboardResponse.data || {});
   } catch (err) {
     console.error("Dashboard API error:", err);
     console.error("Status:", err.response?.status);
@@ -176,122 +154,70 @@ export default function Dashboard() {
     );
   }
 
-  /* ==========================================================
-     API DATA
-  ========================================================== */
+ /* ==========================================================
+   API DATA
+========================================================== */
 
-  const organization = data.organization || {};
-const recruitment = data.recruitment || {};
-const organizationJobs = data.jobs || {};
+const organization = data.organization || {};
+const candidates = data.candidates || {};
+const recruitmentFunnel = data.recruitment_funnel || {};
 
-  const stats = organization.stats || {};
+const jobOverview = Array.isArray(data.active_jobs)
+  ? data.active_jobs
+  : [];
 
-  const users = recruitment.users || {};
-  const jobs = recruitment.jobs || {};
-  const applications = recruitment.applications || {};
-  const interviews = recruitment.interviews || {};
-
-  const applicationStatus =
-    applications.by_status || {};
-
-  const interviewStatus =
-    interviews.by_status || {};
+const recentActivity = Array.isArray(data.recent_activity)
+  ? data.recent_activity
+  : [];
 
   /* ==========================================================
-     BASIC VALUES
-  ========================================================== */
+   BASIC VALUES
+========================================================== */
 
-  const totalUsers = numberValue(
-    users.total
-  );
+const totalUsers = numberValue(
+  organization.total_users
+);
 
-  const activeUsers = numberValue(
-    users.active
-  );
+const activeUsers = numberValue(
+  organization.active_users
+);
 
-  const totalJobs = numberValue(
-    stats.total_jobs ?? jobs.total
-  );
+const totalJobs = numberValue(
+  organization.total_jobs
+);
 
-  const activeJobs = numberValue(
-    stats.active_jobs ?? jobs.active
-  );
+const activeJobs = numberValue(
+  organization.active_jobs
+);
 
-  const totalApplications = numberValue(
-    stats.total_applications ??
-      applications.total
-  );
+const totalApplications = numberValue(
+  candidates.total_applications
+);
 
-  const shortlisted = numberValue(
-    stats.shortlisted_candidates ??
-      applicationStatus.shortlisted
-  );
+const matchedProfiles = numberValue(
+  candidates.matched_profiles
+);
 
-  const totalInterviews = numberValue(
-    interviews.total
-  );
+const shortlisted = numberValue(
+  candidates.shortlisted
+);
 
-  /* ==========================================================
-     HIRED
-  ========================================================== */
+const totalInterviews = numberValue(
+  candidates.interviews
+);
 
-  const hiredApplications =
-    numberValue(applicationStatus.hired) +
-    numberValue(applicationStatus.selected);
+const hiredApplications = numberValue(
+  candidates.selected
+);
 
-  /* ==========================================================
-     MATCHED
-  ========================================================== */
+const screeningApplications = numberValue(
+  recruitmentFunnel.screening
+);
 
-  const matchedProfiles = numberValue(
-    stats.matched_profiles ??
-      stats.matched_candidates ??
-      applications.matched ??
-      applicationStatus.matched
-  );
-
-  /* ==========================================================
-     SCREENING
-  ========================================================== */
-
-  const screeningApplications = numberValue(
-    stats.screening ??
-      stats.screening_candidates ??
-      applicationStatus.screening
-  );
-
-  /* ==========================================================
-     FINALIST
-  ========================================================== */
-
-  const finalistApplications = numberValue(
-    stats.finalist ??
-      stats.finalists ??
-      stats.finalist_candidates ??
-      applicationStatus.finalist
-  );
-
-  /* ==========================================================
-     APPLICATION STATUS DATA
-  ========================================================== */
-
-  const applicationsByStatus = Object.entries(
-    applicationStatus
-  ).map(([status, count]) => ({
-    status,
-    count: numberValue(count),
-  }));
-
-  /* ==========================================================
-     INTERVIEW STATUS DATA
-  ========================================================== */
-
-  const interviewsByStatus = Object.entries(
-    interviewStatus
-  ).map(([status, count]) => ({
-    status,
-    count: numberValue(count),
-  }));
+const finalistApplications = numberValue(
+  recruitmentFunnel.finalist
+);
+ 
 
   /* ==========================================================
      RECRUITMENT FUNNEL
@@ -300,37 +226,54 @@ const organizationJobs = data.jobs || {};
      Missing values become 0.
   ========================================================== */
 
-  const funnel = [
-    {
-      stage: "Applications",
-      count: totalApplications,
-    },
-    {
-      stage: "Matched",
-      count: matchedProfiles,
-    },
-    {
-      stage: "Screening",
-      count: screeningApplications,
-    },
-    {
-      stage: "Shortlisted",
-      count: shortlisted,
-    },
-    {
-      stage: "Interview",
-      count: totalInterviews,
-    },
-    {
-      stage: "Finalist",
-      count: finalistApplications,
-    },
-    {
-      stage: "Selected",
-      count: hiredApplications,
-    },
-  ];
+ /* ==========================================================
+   RECRUITMENT FUNNEL
+========================================================== */
 
+const funnel = [
+  {
+    stage: "Applications",
+    count: numberValue(
+      recruitmentFunnel.applications
+    ),
+  },
+  {
+    stage: "Matched",
+    count: numberValue(
+      recruitmentFunnel.matched
+    ),
+  },
+  {
+    stage: "Screening",
+    count: numberValue(
+      recruitmentFunnel.screening
+    ),
+  },
+  {
+    stage: "Shortlisted",
+    count: numberValue(
+      recruitmentFunnel.shortlisted
+    ),
+  },
+  {
+    stage: "Interview",
+    count: numberValue(
+      recruitmentFunnel.interview
+    ),
+  },
+  {
+    stage: "Finalist",
+    count: numberValue(
+      recruitmentFunnel.finalist
+    ),
+  },
+  {
+    stage: "Selected",
+    count: numberValue(
+      recruitmentFunnel.selected
+    ),
+  },
+];
   /* ==========================================================
      FUNNEL CALCULATIONS
   ========================================================== */
@@ -373,46 +316,24 @@ const organizationJobs = data.jobs || {};
      recruitment.jobs.items
   ========================================================== */
 
- const jobOverview = organizationJobs.filter(
-  (job) => job.status === "open"
-);
 
-  /* ==========================================================
-     RECENT ACTIVITY
-  ========================================================== */
+ /* ==========================================================
+   CANDIDATE QUALITY
+   Not available in current Dashboard API.
+   Keep UI unchanged and show empty values.
+========================================================== */
 
-  const recentActivity =
-    recruitment.recent_activity ||
-    organization.recent_activity ||
-    [];
+const quality = {};
 
-  /* ==========================================================
-     CANDIDATE QUALITY
-  ========================================================== */
+const avgATS = "";
 
-  const quality =
-    recruitment.quality ||
-    organization.quality ||
-    {};
+const avgMatch = "";
 
-  const avgATS = numberValue(
-    quality.avg_ats
-  );
+const above90 = "";
 
-  const avgMatch = numberValue(
-    quality.avg_match
-  );
+const below60 = "";
 
-  const above90 = numberValue(
-    quality.above_90
-  );
-
-  const below60 = numberValue(
-    quality.below_60
-  );
-
-  const qualityDistribution =
-    quality.distribution || [];
+const qualityDistribution = [];
 
   /* ==========================================================
      DISPLAY
@@ -819,9 +740,9 @@ const organizationJobs = data.jobs || {};
                 </td>
 
                 {/* Applications */}
-                <td className="px-4 py-3">
-                  {job.applicants ?? ""}
-                </td>
+               <td className="px-4 py-3">
+  {job.applications ?? ""}
+</td>
 
                 {/* Matched
                     Not available from current API

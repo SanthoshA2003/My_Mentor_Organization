@@ -15,25 +15,56 @@
     const { can } = useAuth();
     const navigate = useNavigate();
     const [jobs, setJobs] = useState(null);
+    const [jobSummary, setJobSummary] = useState(null);
     const [q, setQ] = useState("");
     const [statusF, setStatusF] = useState("all");
     const [deptF, setDeptF] = useState("all");
 
-  const load = () =>
-    api
-      .get("/organizations/me/jobs")
-      .then((r) => {
-        console.log("Organization Jobs API:", r.data);
-        setJobs(Array.isArray(r.data) ? r.data : []);
-      })
-      .catch((error) => {
-        console.error("Organization Jobs API error:", error);
-        console.error("Status:", error.response?.status);
-        console.error("Response:", error.response?.data);
-        setJobs([]);
-      });
+ const load = async () => {
+  try {
+    const [jobsResponse, summaryResponse] = await Promise.all([
+      api.get("/organizations/me/jobs"),
+      api.get("/organizations/me/jobs/summary"),
+    ]);
+
+    console.log(
+      "Organization Jobs API:",
+      jobsResponse.data
+    );
+
+    console.log(
+      "Organization Jobs Summary API:",
+      summaryResponse.data
+    );
+
+    setJobs(
+      Array.isArray(jobsResponse.data)
+        ? jobsResponse.data
+        : []
+    );
+
+    setJobSummary(
+      summaryResponse.data || {}
+    );
+  } catch (error) {
+    console.error("Organization Jobs API error:", error);
+    console.error("Status:", error.response?.status);
+    console.error("Response:", error.response?.data);
+
+    setJobs([]);
+    setJobSummary({});
+  }
+};
       
       useEffect(() => { load(); }, []);
+
+      // Job Summary API values
+const totalJobs = jobSummary?.total_jobs ?? "";
+const draftJobs = jobSummary?.draft ?? "";
+const activeJobs = jobSummary?.active ?? "";
+const pausedJobs = jobSummary?.paused ?? "";
+const closedJobs = jobSummary?.closed ?? "";
+const filledJobs = jobSummary?.filled ?? "";
 
     const changeStatus = async (job, status) => {
       await api.post(`/jobs/${job.id}/status`, { status });
@@ -72,8 +103,6 @@
   );
 });
 
-    const counts = (jobs || []).reduce((a, j) => { a[j.status] = (a[j.status] || 0) + 1; return a; }, {});
-
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -92,18 +121,52 @@
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KPICard testId="job-kpi-total" label="Total Jobs" value={jobs?.length || 0} icon={Briefcase} />
-          <KPICard testId="job-kpi-draft" label="Draft" value={counts.draft || 0} icon={Layers} accent="text-slate-500" />
-  <KPICard
-    testId="job-kpi-active"
-    label="Active"
-    value={(counts.active || 0) + (counts.open || 0)}
-    icon={PlayCircle}
-    accent="text-emerald-500"
-  />
-          <KPICard testId="job-kpi-paused" label="Paused" value={counts.paused || 0} icon={PauseCircle} accent="text-amber-500" />
-          <KPICard testId="job-kpi-closed" label="Closed" value={counts.closed || 0} icon={XCircle} accent="text-slate-500" />
-          <KPICard testId="job-kpi-filled" label="Filled" value={counts.filled || 0} icon={CheckCircle2} accent="text-[#1e5bff]" />
+         <KPICard
+  testId="job-kpi-total"
+  label="Total Jobs"
+  value={totalJobs}
+  icon={Briefcase}
+/>
+
+<KPICard
+  testId="job-kpi-draft"
+  label="Draft"
+  value={draftJobs}
+  icon={Layers}
+  accent="text-slate-500"
+/>
+
+<KPICard
+  testId="job-kpi-active"
+  label="Active"
+  value={activeJobs}
+  icon={PlayCircle}
+  accent="text-emerald-500"
+/>
+
+<KPICard
+  testId="job-kpi-paused"
+  label="Paused"
+  value={pausedJobs}
+  icon={PauseCircle}
+  accent="text-amber-500"
+/>
+
+<KPICard
+  testId="job-kpi-closed"
+  label="Closed"
+  value={closedJobs}
+  icon={XCircle}
+  accent="text-slate-500"
+/>
+
+<KPICard
+  testId="job-kpi-filled"
+  label="Filled"
+  value={filledJobs}
+  icon={CheckCircle2}
+  accent="text-[#1e5bff]"
+/>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
