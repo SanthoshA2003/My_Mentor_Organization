@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
           "organization": {...}
         }
 
-        OR
+        OR:
 
         {
           "id": "...",
@@ -90,9 +90,22 @@ export function AuthProvider({ children }) {
 
   /* ============================================================
      ADMIN LOGIN
+
+     API:
+     POST /api/auth/admin/login
+
+     Response:
+     {
+       "access_token": "...",
+       "token_type": "bearer"
+     }
   ============================================================ */
 
-  const login = async (email, password, remember = true) => {
+  const login = async (
+    email,
+    password,
+    remember = true
+  ) => {
     try {
       console.log("=================================");
       console.log("ADMIN LOGIN START");
@@ -103,22 +116,53 @@ export function AuthProvider({ children }) {
          1. LOGIN API
       -------------------------------------------------------- */
 
-      const response = await api.post("/auth/admin/login", {
-        email,
-        password,
-      });
+      const response = await api.post(
+        "/auth/admin/login",
+        {
+          email,
+          password,
+        }
+      );
 
       const data = response.data;
 
-      console.log("ADMIN LOGIN RESPONSE:", data);
+      console.log(
+        "ADMIN LOGIN RESPONSE:",
+        data
+      );
 
-      if (!data.token) {
+      /* --------------------------------------------------------
+         2. GET ACCESS TOKEN
+
+         Backend returns:
+         access_token
+
+         NOT:
+         token
+      -------------------------------------------------------- */
+
+      const token = data?.access_token;
+
+      if (!token) {
+        console.error(
+          "LOGIN RESPONSE DOES NOT CONTAIN access_token:",
+          data
+        );
+
         throw new Error(
-          "Login successful but token was not returned."
+          "Login successful but access_token was not returned."
         );
       }
 
-      // Remove old tokens
+      console.log(
+        "ACCESS TOKEN RECEIVED:",
+        !!token
+      );
+
+      /* --------------------------------------------------------
+         3. REMOVE OLD TOKENS
+      -------------------------------------------------------- */
+
       localStorage.removeItem("mm_token");
       sessionStorage.removeItem("mm_token");
 
@@ -127,30 +171,37 @@ export function AuthProvider({ children }) {
       -------------------------------------------------------- */
 
       if (remember) {
-        localStorage.setItem("mm_token", data.token);
+        localStorage.setItem(
+          "mm_token",
+          token
+        );
       } else {
-        sessionStorage.setItem("mm_token", data.token);
+        sessionStorage.setItem(
+          "mm_token",
+          token
+        );
       }
 
       console.log("TOKEN SAVED");
 
       /* --------------------------------------------------------
          5. GET CURRENT LOGGED-IN USER
-         
-         IMPORTANT:
-         This is the missing part in your current code.
       -------------------------------------------------------- */
 
-      console.log("CALLING /auth/me...");
+      console.log(
+        "CALLING /auth/me..."
+      );
 
-      const meResponse = await api.get("/auth/me");
+      const meResponse =
+        await api.get("/auth/me");
 
       console.log(
         "AUTH ME AFTER LOGIN:",
         meResponse.data
       );
 
-      const meData = meResponse.data;
+      const meData =
+        meResponse.data;
 
       /* --------------------------------------------------------
          6. EXTRACT USER
@@ -179,24 +230,64 @@ export function AuthProvider({ children }) {
       setUser(currentUser);
       setOrg(organization);
 
-      console.log("USER STATE UPDATED");
-      console.log("LOGIN COMPLETE");
+      console.log(
+        "USER STATE UPDATED"
+      );
+
+      console.log(
+        "LOGIN COMPLETE"
+      );
+
+      /* --------------------------------------------------------
+         8. RETURN LOGIN RESULT
+      -------------------------------------------------------- */
 
       return {
         ...data,
-        token,
+
+        /*
+         * Keep both names available to avoid
+         * breaking existing frontend code.
+         */
+        token: token,
+        access_token: token,
+
         user: currentUser,
         organization,
       };
-    } catch (error) {
-      console.error("=================================");
-      console.error("ADMIN LOGIN ERROR");
-      console.error("=================================");
 
-      console.error("ERROR:", error);
-      console.error("STATUS:", error.response?.status);
-      console.error("RESPONSE:", error.response?.data);
-      console.error("MESSAGE:", error.message);
+    } catch (error) {
+      console.error(
+        "================================="
+      );
+
+      console.error(
+        "ADMIN LOGIN ERROR"
+      );
+
+      console.error(
+        "================================="
+      );
+
+      console.error(
+        "ERROR:",
+        error
+      );
+
+      console.error(
+        "STATUS:",
+        error.response?.status
+      );
+
+      console.error(
+        "RESPONSE:",
+        error.response?.data
+      );
+
+      console.error(
+        "MESSAGE:",
+        error.message
+      );
 
       throw error;
     }
@@ -208,13 +299,23 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post(
+        "/auth/logout"
+      );
     } catch (error) {
-      console.error("Logout API error:", error);
+      console.error(
+        "Logout API error:",
+        error
+      );
     }
 
-    localStorage.removeItem("mm_token");
-    sessionStorage.removeItem("mm_token");
+    localStorage.removeItem(
+      "mm_token"
+    );
+
+    sessionStorage.removeItem(
+      "mm_token"
+    );
 
     setUser(null);
     setOrg(null);
@@ -225,7 +326,8 @@ export function AuthProvider({ children }) {
   ============================================================ */
 
   const can = (perm) =>
-    (user?.permissions || []).includes(perm);
+    (user?.permissions || [])
+      .includes(perm);
 
   /* ============================================================
      PROVIDER
@@ -249,4 +351,9 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+/* ============================================================
+   AUTH HOOK
+============================================================ */
+
+export const useAuth = () =>
+  useContext(AuthContext);

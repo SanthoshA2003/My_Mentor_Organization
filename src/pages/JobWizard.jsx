@@ -53,23 +53,96 @@ export default function JobWizard() {
 
   useEffect(() => {
     api.get("/users").then((r) => setUsers(r.data)).catch(() => {});
-    if (id) api.get(`/jobs/${id}`).then((r) => setForm((f) => ({ ...f, ...r.data }))).catch(() => {});
+    if (id) api.get(`/organizations/me/jobs/${id}`).then((r) => setForm((f) => ({ ...f, ...r.data }))).catch(() => {});
   }, [id]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const atsTotal = Object.values(form.ats_config).reduce((a, b) => a + b, 0);
 
   const save = async (status) => {
-    setSaving(true);
-    const payload = { ...form, status };
-    try {
-      if (id) await api.put(`/jobs/${id}`, { data: payload });
-      else await api.post("/jobs", { data: payload });
-      toast.success(status === "active" ? "Job published!" : "Draft saved");
-      navigate("/jobs");
-    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
-    finally { setSaving(false); }
+  setSaving(true);
+
+  const payload = {
+    title: form.title,
+    department: form.department,
+    location: form.location,
+
+    // API expects job_type, not employment_type
+    job_type: form.employment_type,
+
+    work_mode: form.work_mode,
+
+    min_experience: Number(form.min_experience),
+    max_experience: Number(form.max_experience),
+    openings: Number(form.openings),
+
+    salary_min: Number(form.salary_min),
+    salary_max: Number(form.salary_max),
+
+    recruiter_id: form.recruiter_id || null,
+    hiring_manager_id: form.hiring_manager_id || null,
+
+    summary: form.summary,
+    description: form.description || form.summary || "",
+
+    responsibilities: form.responsibilities,
+    required_skills: form.required_skills,
+    preferred_skills: form.preferred_skills,
+
+    education: form.education,
+
+    mandatory_requirements: form.mandatory_requirements,
+    preferred_requirements: form.preferred_requirements,
+
+    // Convert wizard questions to API format
+    screening_questions: form.screening_questions.map((q) => ({
+      question: q.text,
+      question_type: q.type,
+      required: q.mandatory,
+      options: q.options || [],
+    })),
+
+    // API expects ats_configuration
+    ats_configuration: {
+      skills: form.ats_config.skills,
+      experience: form.ats_config.experience,
+      education: form.ats_config.education,
+      role_relevance: form.ats_config.role_relevance,
+      screening_questions: form.ats_config.screening,
+      certifications: form.ats_config.certifications,
+    },
+
+    apply_email: form.apply_email || "",
+    status,
   };
+
+  try {
+    if (id) {
+      await api.put(`/jobs/${id}`, payload);
+      toast.success("Job updated successfully");
+    } else {
+      await api.post("/organizations/me/jobs", payload);
+      toast.success(
+        status === "open"
+          ? "Job published successfully!"
+          : "Draft saved successfully"
+      );
+    }
+
+    navigate("/jobs");
+  } catch (e) {
+    console.error("Job save error:", e);
+    console.error("Response:", e.response?.data);
+
+    toast.error(
+      e.response?.data?.detail ||
+        formatApiError(e.response?.data?.detail) ||
+        "Failed to save job."
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   const addQuestion = () => set("screening_questions", [...form.screening_questions, { id: crypto.randomUUID(), type: "yes_no", text: "", mandatory: true }]);
   const updateQ = (i, k, v) => { const q = [...form.screening_questions]; q[i][k] = v; set("screening_questions", q); };
