@@ -317,7 +317,7 @@ export default function Jobs() {
               <thead className="bg-slate-50 text-slate-500">
                 <tr className="text-left">
                   {[
-                    // "Job ID",
+                    "Job ID",
                     "Title",
                     "Dept",
                     "Location",
@@ -356,9 +356,9 @@ export default function Jobs() {
                     >
 
                       {/* Job ID */}
-                      {/* <td className="px-3 py-3 text-slate-500 whitespace-nowrap">
+                      <td className="px-3 py-3 text-slate-500 whitespace-nowrap">
                         {j.job_id || j.id || "—"}
-                      </td> */}
+                      </td>
 
                       {/* Title */}
                       <td className="px-3 py-3 font-medium text-[#0a2540] whitespace-nowrap">

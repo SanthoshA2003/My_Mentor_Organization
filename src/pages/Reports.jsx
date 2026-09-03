@@ -80,42 +80,40 @@ export default function Reports() {
   // =========================================================
   // EXPORT
   // =========================================================
-  const exportCsv = (kind) => {
-    const url = `${API}/reports/export?kind=${kind}&auth=${getToken()}`;
-
-    window.open(
-      url.replace(
-        "&auth=",
-        `&_t=${Date.now()}&auth=`
-      ),
-      "_blank"
+  const exportCsv = async (kind) => {
+  try {
+    const response = await api.get(
+      `/reports/export?kind=${kind}`,
+      {
+        responseType: "blob",
+      }
     );
 
-    api
-      .get(`/reports/export?kind=${kind}`, {
-        responseType: "blob",
-      })
-      .then((res) => {
-        const blob = new Blob([res.data], {
-          type: "text/csv",
-        });
+    const blob = new Blob([response.data], {
+      type: "text/csv;charset=utf-8;",
+    });
 
-        const link = document.createElement("a");
+    const url = window.URL.createObjectURL(blob);
 
-        link.href = URL.createObjectURL(blob);
-        link.download = `${kind}_report.csv`;
+    const link = document.createElement("a");
 
-        link.click();
+    link.href = url;
+    link.download =
+      kind === "overview"
+        ? "recruitment_overview.csv"
+        : "job_performance.csv";
 
-        URL.revokeObjectURL(link.href);
-      })
-      .catch((error) => {
-        console.error(
-          "Export error:",
-          error
-        );
-      });
-  };
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Export error:", error);
+  }
+};
 
   // =========================================================
   // LOADING
@@ -262,33 +260,47 @@ export default function Reports() {
           </p>
         </div>
 
-        {can("export_reports") && (
-          <div className="flex gap-2">
+     <div className="flex items-center gap-2">
 
-            <Button
-              variant="outline"
-              data-testid="export-overview-btn"
-              onClick={() =>
-                exportCsv("overview")
-              }
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export Overview
-            </Button>
+  <Button
+    variant="outline"
+    data-testid="export-overview-btn"
+    onClick={() => exportCsv("overview")}
+    className="
+      h-10
+      border-slate-200
+      bg-white
+      text-[#0a2540]
+      font-medium
+      shadow-sm
+      hover:bg-slate-50
+      hover:border-slate-300
+    "
+  >
+    <Download className="h-4 w-4 mr-2" />
+    Export Overview
+  </Button>
 
-            <Button
-              variant="outline"
-              data-testid="export-jobperf-btn"
-              onClick={() =>
-                exportCsv("job_performance")
-              }
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export Job Performance
-            </Button>
+  <Button
+    variant="outline"
+    data-testid="export-jobperf-btn"
+    onClick={() => exportCsv("job_performance")}
+    className="
+      h-10
+      border-slate-200
+      bg-white
+      text-[#0a2540]
+      font-medium
+      shadow-sm
+      hover:bg-slate-50
+      hover:border-slate-300
+    "
+  >
+    <Download className="h-4 w-4 mr-2" />
+    Export Job Performance
+  </Button>
 
-          </div>
-        )}
+</div>
       </div>
 
       {/* =====================================================

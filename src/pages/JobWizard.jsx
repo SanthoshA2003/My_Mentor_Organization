@@ -40,6 +40,54 @@ const STEPS = [
   "Review & Publish",
 ];
 
+/*
+ * --------------------------------------------------
+ * MANUAL RECRUITERS
+ * --------------------------------------------------
+ *
+ * These are static/manual dropdown options.
+ *
+ * IMPORTANT:
+ * If your backend expects real UUIDs, replace the
+ * IDs below with the actual recruiter UUIDs.
+ */
+
+const RECRUITERS = [
+  {
+    id: "recruiter-1",
+    name: "Kavinashri G",
+  },
+  {
+    id: "recruiter-2",
+    name: "Priya Sharma",
+  },
+  {
+    id: "recruiter-3",
+    name: "Rahul Kumar",
+  },
+];
+
+/*
+ * --------------------------------------------------
+ * MANUAL HIRING MANAGERS
+ * --------------------------------------------------
+ */
+
+const HIRING_MANAGERS = [
+  {
+    id: "manager-1",
+    name: "Santhosh A",
+  },
+  {
+    id: "manager-2",
+    name: "Arun Kumar",
+  },
+  {
+    id: "manager-3",
+    name: "Divya Raj",
+  },
+];
+
 const ATS_KEYS = [
   ["skills", "Skills"],
   ["experience", "Experience"],
@@ -49,14 +97,29 @@ const ATS_KEYS = [
   ["certifications", "Certifications"],
 ];
 
-function TagInput({ value, onChange, placeholder, testId }) {
+/*
+ * --------------------------------------------------
+ * TAG INPUT
+ * --------------------------------------------------
+ */
+
+function TagInput({
+  value,
+  onChange,
+  placeholder,
+  testId,
+}) {
   const [input, setInput] = useState("");
 
   const add = () => {
-    if (input.trim()) {
-      onChange([...value, input.trim()]);
-      setInput("");
+    const trimmed = input.trim();
+
+    if (!trimmed) {
+      return;
     }
+
+    onChange([...value, trimmed]);
+    setInput("");
   };
 
   return (
@@ -75,7 +138,11 @@ function TagInput({ value, onChange, placeholder, testId }) {
           placeholder={placeholder}
         />
 
-        <Button type="button" variant="outline" onClick={add}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={add}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -83,7 +150,7 @@ function TagInput({ value, onChange, placeholder, testId }) {
       <div className="flex flex-wrap gap-2 mt-2">
         {value.map((t, i) => (
           <span
-            key={i}
+            key={`${t}-${i}`}
             className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
           >
             {t}
@@ -91,7 +158,9 @@ function TagInput({ value, onChange, placeholder, testId }) {
             <button
               type="button"
               onClick={() =>
-                onChange(value.filter((_, x) => x !== i))
+                onChange(
+                  value.filter((_, x) => x !== i)
+                )
               }
             >
               <X className="h-3 w-3" />
@@ -103,29 +172,30 @@ function TagInput({ value, onChange, placeholder, testId }) {
   );
 }
 
+/*
+ * ==================================================
+ * JOB WIZARD
+ * ==================================================
+ */
+
 export default function JobWizard() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
-  const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-  company_name: "",
+    company_name: "MyMentor",
 
-  job_id: "",
-
-  title: "",
+    title: "",
     department: "",
 
     /*
-     * UI keeps both values:
      * job_type = role/category
      * employment_type = Full-time/Part-time/etc.
      *
-     * When sending to API, employment_type is mapped
-     * to job_type because that is what your API expects.
+     * API currently receives employment_type as job_type.
      */
     job_type: "Individual Contributor",
     employment_type: "Full-time",
@@ -175,128 +245,181 @@ export default function JobWizard() {
   });
 
   /*
-   * --------------------------------------------------
-   * Load users / existing job
-   * --------------------------------------------------
+   * ==================================================
+   * LOAD EXISTING JOB
+   * ==================================================
+   *
+   * No /users API call here.
+   *
+   * Recruiter and Hiring Manager are manual dropdowns.
    */
 
   useEffect(() => {
+    if (!id) {
+      return;
+    }
+
     api
-      .get("/users")
+      .get(`/jobs/${id}`)
       .then((r) => {
-        setUsers(Array.isArray(r.data) ? r.data : []);
+        const data = r.data || {};
+
+        setForm((f) => ({
+          ...f,
+
+          ...data,
+
+          company_name:
+            data.company_name ?? f.company_name,
+
+          title:
+            data.title ?? f.title,
+
+          department:
+            data.department ?? f.department,
+
+          employment_type:
+            data.employment_type ??
+            data.job_type ??
+            f.employment_type,
+
+          job_type:
+            data.job_type ??
+            f.job_type,
+
+          location:
+            data.location ?? f.location,
+
+          work_mode:
+            data.work_mode ?? f.work_mode,
+
+          min_experience:
+            data.min_experience ??
+            f.min_experience,
+
+          max_experience:
+            data.max_experience ??
+            f.max_experience,
+
+          openings:
+            data.openings ?? f.openings,
+
+          salary_min:
+            data.salary_min ?? f.salary_min,
+
+          salary_max:
+            data.salary_max ?? f.salary_max,
+
+          recruiter_id:
+            data.recruiter_id ?? "",
+
+          recruiter_name:
+            data.recruiter_name ?? "",
+
+          hiring_manager_id:
+            data.hiring_manager_id ?? "",
+
+          hiring_manager_name:
+            data.hiring_manager_name ?? "",
+
+          summary:
+            data.summary ?? f.summary,
+
+          description:
+            data.description ?? f.description,
+
+          responsibilities:
+            Array.isArray(data.responsibilities)
+              ? data.responsibilities
+              : f.responsibilities,
+
+          required_skills:
+            Array.isArray(data.required_skills)
+              ? data.required_skills
+              : f.required_skills,
+
+          preferred_skills:
+            Array.isArray(data.preferred_skills)
+              ? data.preferred_skills
+              : f.preferred_skills,
+
+          education:
+            data.education ?? f.education,
+
+          mandatory_requirements:
+            Array.isArray(data.mandatory_requirements)
+              ? data.mandatory_requirements
+              : f.mandatory_requirements,
+
+          preferred_requirements:
+            Array.isArray(data.preferred_requirements)
+              ? data.preferred_requirements
+              : f.preferred_requirements,
+
+          screening_questions:
+            Array.isArray(data.screening_questions)
+              ? data.screening_questions.map((q) => ({
+                  id:
+                    q.id ||
+                    crypto.randomUUID(),
+
+                  type:
+                    q.question_type ||
+                    q.type ||
+                    "yes_no",
+
+                  text:
+                    q.question ||
+                    q.text ||
+                    "",
+
+                  mandatory:
+                    q.required ??
+                    q.mandatory ??
+                    true,
+
+                  options:
+                    Array.isArray(q.options)
+                      ? q.options
+                      : [],
+                }))
+              : f.screening_questions,
+
+          ats_config: {
+            ...f.ats_config,
+
+            ...(data.ats_configuration || {}),
+
+            screening:
+              data.ats_configuration
+                ?.screening_questions ??
+              data.ats_configuration
+                ?.screening ??
+              f.ats_config.screening,
+          },
+
+          apply_email:
+            data.apply_email ??
+            f.apply_email,
+
+          status:
+            data.status ?? f.status,
+        }));
       })
       .catch((error) => {
         console.error(
-          "Load users error:",
+          "Load job error:",
           error.response?.data || error
         );
+
+        toast.error("Failed to load job.");
       });
-
-    if (id) {
-      api
-        .get(`/jobs/${id}`)
-        .then((r) => {
-          const data = r.data || {};
-
-          setForm((f) => ({
-            ...f,
-
-            ...data,
-
-            company_name:
-              data.company_name ?? f.company_name,
-
-            /*
-             * Backend may return job_type.
-             * Keep the UI employment type in sync.
-             */
-            employment_type:
-              data.employment_type ??
-              data.job_type ??
-              f.employment_type,
-
-            job_type:
-              data.job_type ??
-              f.job_type,
-
-            description:
-              data.description ??
-              f.description,
-
-            recruiter_id:
-              data.recruiter_id ?? "",
-
-            hiring_manager_id:
-              data.hiring_manager_id ?? "",
-
-            screening_questions:
-              Array.isArray(data.screening_questions)
-                ? data.screening_questions.map((q) => ({
-                    id:
-                      q.id ||
-                      crypto.randomUUID(),
-
-                    type:
-                      q.question_type ||
-                      q.type ||
-                      "yes_no",
-
-                    text:
-                      q.question ||
-                      q.text ||
-                      "",
-
-                    mandatory:
-                      q.required ??
-                      q.mandatory ??
-                      true,
-
-                    options:
-                      q.options || [],
-                  }))
-                : f.screening_questions,
-
-            ats_config: {
-              ...f.ats_config,
-
-              ...(data.ats_configuration || {}),
-
-              screening:
-                data.ats_configuration
-                  ?.screening_questions ??
-                data.ats_configuration?.screening ??
-                f.ats_config.screening,
-            },
-          }));
-        })
-        .catch((error) => {
-          console.error(
-            "Load job error:",
-            error.response?.data || error
-          );
-
-          toast.error("Failed to load job.");
-        });
-    }
   }, [id]);
 
-
-  useEffect(() => {
-  if (!id) {
-    generateJobId().then((jobId) => {
-      setForm((f) => ({
-        ...f,
-        job_id: jobId,
-      }));
-    });
-  }
-}, [id]);
-
   /*
-   * --------------------------------------------------
-   * Generic form setter
-   * --------------------------------------------------
+   * ==================================================
+   * GENERIC FORM SETTER
+   * ==================================================
    */
 
   const set = (key, value) => {
@@ -307,111 +430,60 @@ export default function JobWizard() {
   };
 
   /*
-   * --------------------------------------------------
-   * ATS total
-   * --------------------------------------------------
+   * ==================================================
+   * ATS TOTAL
+   * ==================================================
    */
 
-  const atsTotal = Object.values(form.ats_config).reduce(
-    (a, b) => a + b,
-    0
-  );
-
-
-  const generateJobId = async () => {
-  try {
-    const response = await api.get(
-      "/organizations/me/jobslist"
-    );
-
-    const jobs = Array.isArray(response.data?.items)
-      ? response.data.items
-      : [];
-
-    let maxNumber = 1000;
-
-    jobs.forEach((job) => {
-      const jobId = job.job_id;
-
-      if (typeof jobId !== "string") {
-        return;
-      }
-
-      const match = jobId.match(/^JOB-(\d+)$/);
-
-      if (match) {
-        const number = Number(match[1]);
-
-        if (number > maxNumber) {
-          maxNumber = number;
-        }
-      }
-    });
-
-    return `JOB-${maxNumber + 1}`;
-  } catch (error) {
-    console.error(
-      "Generate Job ID error:",
-      error.response?.data || error
-    );
-
-    // Fallback
-    return `JOB-${Date.now()}`;
-  }
-};
+  const atsTotal = Object.values(
+    form.ats_config
+  ).reduce((a, b) => a + Number(b || 0), 0);
 
   /*
-   * --------------------------------------------------
-   * Save / Publish
-   * --------------------------------------------------
+   * ==================================================
+   * SAVE / PUBLISH
+   * ==================================================
    */
 
   const save = async (status) => {
-  if (!form.company_name?.trim()) {
-    toast.error("Company name is required.");
-    return;
-  }
-
-  if (!form.title?.trim()) {
-    toast.error("Job title is required.");
-    return;
-  }
-
-  if (status === "active" && atsTotal !== 100) {
-    toast.error(
-      "ATS weights must total 100% before publishing."
-    );
-    return;
-  }
-
-  setSaving(true);
-
-  try {
-    let jobId = form.job_id;
-
-    // Generate Job ID only for a new job
-    if (!id && !jobId) {
-      jobId = await generateJobId();
-
-      setForm((f) => ({
-        ...f,
-        job_id: jobId,
-      }));
+    if (!form.company_name?.trim()) {
+      toast.error("Company name is required.");
+      return;
     }
 
+    if (!form.title?.trim()) {
+      toast.error("Job title is required.");
+      return;
+    }
+
+    if (status === "active" && atsTotal !== 100) {
+      toast.error(
+        "ATS weights must total 100% before publishing."
+      );
+      return;
+    }
+
+    setSaving(true);
+
     const payload = {
-      job_id: jobId,
+      company_name:
+        form.company_name.trim(),
 
-      company_name: form.company_name.trim(),
+      title:
+        form.title.trim(),
 
-      title: form.title.trim(),
+      department:
+        form.department || "",
 
-      department: form.department || "",
-
+      /*
+       * Backend expects job_type to contain
+       * Full-time / Part-time / Contract / Internship.
+       */
       job_type:
         form.employment_type || "Full-time",
 
-      location: form.location || "",
+      location:
+        form.location || "",
 
       work_mode:
         form.work_mode || "On-site",
@@ -431,11 +503,15 @@ export default function JobWizard() {
       salary_max:
         Number(form.salary_max) || 0,
 
-      recruiter_id:
-        form.recruiter_id || null,
+      /*
+       * Manual recruiter dropdown
+       */
+      recruiter_id: null,
 
-      hiring_manager_id:
-        form.hiring_manager_id || null,
+      /*
+       * Manual hiring manager dropdown
+       */
+      hiring_manager_id: null,
 
       summary:
         form.summary || "",
@@ -464,7 +540,8 @@ export default function JobWizard() {
       screening_questions: (
         form.screening_questions || []
       ).map((q) => ({
-        question: q.text || "",
+        question:
+          q.text || "",
 
         question_type:
           q.type || "yes_no",
@@ -477,8 +554,8 @@ export default function JobWizard() {
           q.options.length > 0
             ? q.options
             : q.type === "yes_no"
-            ? ["Yes", "No"]
-            : [],
+              ? ["Yes", "No"]
+              : [],
       })),
 
       ats_configuration: {
@@ -492,71 +569,82 @@ export default function JobWizard() {
           Number(form.ats_config.education) || 0,
 
         role_relevance:
-          Number(form.ats_config.role_relevance) || 0,
+          Number(
+            form.ats_config.role_relevance
+          ) || 0,
 
         screening_questions:
-          Number(form.ats_config.screening) || 0,
+          Number(
+            form.ats_config.screening
+          ) || 0,
 
         certifications:
-          Number(form.ats_config.certifications) || 0,
+          Number(
+            form.ats_config.certifications
+          ) || 0,
       },
 
       apply_email:
         form.apply_email || "",
 
+      /*
+       * Backend accepts:
+       * draft
+       * active
+       * closed
+       * paused
+       */
       status,
     };
 
     console.log(
-      "========== JOB CREATE PAYLOAD =========="
+      "Job API payload:",
+      payload
     );
 
-    console.log("Generated Job ID:", jobId);
-    console.log("Payload:", payload);
+    try {
+      if (id) {
+        await api.put(
+          `/jobs/${id}`,
+          payload
+        );
+      } else {
+        await api.post(
+          "/organizations/me/jobs",
+          payload
+        );
+      }
 
-    if (id) {
-      await api.put(
-        `/jobs/${id}`,
-        payload
+      toast.success(
+        status === "active"
+          ? "Job published!"
+          : "Draft saved"
       );
-    } else {
-      await api.post(
-        "/organizations/me/jobs",
-        payload
+
+      navigate("/jobs");
+    } catch (e) {
+      console.error(
+        "Save job error:",
+        e.response?.data || e
       );
+
+      const detail =
+        e.response?.data?.detail;
+
+      toast.error(
+        formatApiError(detail) ||
+          e.response?.data?.message ||
+          "Failed to save job."
+      );
+    } finally {
+      setSaving(false);
     }
+  };
 
-    toast.success(
-      status === "active"
-        ? `Job ${jobId} published!`
-        : `Job ${jobId} saved as draft`
-    );
-
-    navigate("/jobs");
-
-  } catch (e) {
-    console.error(
-      "Save job error:",
-      e.response?.data || e
-    );
-
-    const detail =
-      e.response?.data?.detail;
-
-    toast.error(
-      formatApiError(detail) ||
-        e.response?.data?.message ||
-        "Failed to save job."
-    );
-
-  } finally {
-    setSaving(false);
-  }
-};
   /*
-   * --------------------------------------------------
-   * Screening Questions
-   * --------------------------------------------------
+   * ==================================================
+   * SCREENING QUESTIONS
+   * ==================================================
    */
 
   const addQuestion = () => {
@@ -583,17 +671,19 @@ export default function JobWizard() {
     );
   };
 
-  const updateQ = (index, key, value) => {
+  const updateQ = (
+    index,
+    key,
+    value
+  ) => {
     const questions = [
       ...form.screening_questions,
     ];
 
-    questions[index][key] = value;
-
-    /*
-     * If question type changes to yes/no,
-     * make sure options exist.
-     */
+    questions[index] = {
+      ...questions[index],
+      [key]: value,
+    };
 
     if (
       key === "type" &&
@@ -605,6 +695,13 @@ export default function JobWizard() {
       ];
     }
 
+    if (
+      key === "type" &&
+      value !== "yes_no"
+    ) {
+      questions[index].options = [];
+    }
+
     set(
       "screening_questions",
       questions
@@ -612,15 +709,17 @@ export default function JobWizard() {
   };
 
   /*
-   * --------------------------------------------------
-   * Render
-   * --------------------------------------------------
+   * ==================================================
+   * RENDER
+   * ==================================================
    */
 
   return (
     <div className="space-y-6 max-w-4xl">
 
-      {/* Header */}
+      {/* =========================================
+          HEADER
+      ========================================= */}
 
       <div className="flex items-center justify-between">
         <div>
@@ -643,12 +742,13 @@ export default function JobWizard() {
           disabled={saving}
         >
           <Save className="h-4 w-4 mr-2" />
-
           Save Draft
         </Button>
       </div>
 
-      {/* Progress */}
+      {/* =========================================
+          PROGRESS
+      ========================================= */}
 
       <div className="flex items-center">
         {STEPS.map((s, i) => (
@@ -657,6 +757,7 @@ export default function JobWizard() {
             className="flex items-center flex-1 last:flex-none"
           >
             <button
+              type="button"
               onClick={() => setStep(i)}
               className="flex items-center gap-2 shrink-0"
             >
@@ -667,8 +768,8 @@ export default function JobWizard() {
                   i < step
                     ? "bg-emerald-500 text-white"
                     : i === step
-                    ? "bg-[#1e5bff] text-white"
-                    : "bg-slate-200 text-slate-500"
+                      ? "bg-[#1e5bff] text-white"
+                      : "bg-slate-200 text-slate-500"
                 )}
               >
                 {i < step ? (
@@ -691,8 +792,7 @@ export default function JobWizard() {
               </span>
             </button>
 
-            {i <
-              STEPS.length - 1 && (
+            {i < STEPS.length - 1 && (
               <div
                 className={cn(
                   "h-0.5 flex-1 mx-2",
@@ -707,7 +807,9 @@ export default function JobWizard() {
         ))}
       </div>
 
-      {/* Main Card */}
+      {/* =========================================
+          MAIN CARD
+      ========================================= */}
 
       <Card
         className="border-slate-200 shadow-sm p-6"
@@ -737,7 +839,7 @@ export default function JobWizard() {
                     e.target.value
                   )
                 }
-                placeholder="e.g. Infosys, TCS"
+                placeholder="e.g. MyMentor"
               />
             </div>
 
@@ -777,6 +879,7 @@ export default function JobWizard() {
                     e.target.value
                   )
                 }
+                placeholder="e.g. Engineering"
               />
             </div>
 
@@ -799,7 +902,7 @@ export default function JobWizard() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select employment type" />
                 </SelectTrigger>
 
                 <SelectContent>
@@ -835,6 +938,7 @@ export default function JobWizard() {
                     e.target.value
                   )
                 }
+                placeholder="e.g. Chennai"
               />
             </div>
 
@@ -884,6 +988,7 @@ export default function JobWizard() {
 
               <Input
                 type="number"
+                min="0"
                 value={form.min_experience}
                 onChange={(e) =>
                   set(
@@ -903,6 +1008,7 @@ export default function JobWizard() {
 
               <Input
                 type="number"
+                min="0"
                 value={form.max_experience}
                 onChange={(e) =>
                   set(
@@ -922,6 +1028,7 @@ export default function JobWizard() {
 
               <Input
                 type="number"
+                min="1"
                 value={form.openings}
                 onChange={(e) =>
                   set(
@@ -941,6 +1048,7 @@ export default function JobWizard() {
 
               <Input
                 type="number"
+                min="0"
                 value={form.salary_min}
                 onChange={(e) =>
                   set(
@@ -960,6 +1068,7 @@ export default function JobWizard() {
 
               <Input
                 type="number"
+                min="0"
                 value={form.salary_max}
                 onChange={(e) =>
                   set(
@@ -970,7 +1079,9 @@ export default function JobWizard() {
               />
             </div>
 
-            {/* Recruiter */}
+            {/* =====================================
+                RECRUITER - MANUAL DROPDOWN
+            ===================================== */}
 
             <div className="space-y-1">
               <Label>
@@ -979,55 +1090,51 @@ export default function JobWizard() {
 
               <Select
                 value={
-                  form.recruiter_id
+                  form.recruiter_id || ""
                 }
-                onValueChange={(v) => {
-                  const u =
-                    users.find(
-                      (x) =>
-                        x.id === v
+                onValueChange={(value) => {
+                  const recruiter =
+                    RECRUITERS.find(
+                      (item) =>
+                        item.id === value
                     );
 
                   set(
                     "recruiter_id",
-                    v
+                    recruiter?.id || ""
                   );
 
                   set(
                     "recruiter_name",
-                    u?.name || ""
+                    recruiter?.name || ""
                   );
                 }}
               >
                 <SelectTrigger
                   data-testid="job-recruiter-select"
+                  className="w-full"
                 >
                   <SelectValue placeholder="Assign recruiter" />
                 </SelectTrigger>
 
                 <SelectContent>
-                  {users
-                    .filter((u) =>
-                      [
-                        "recruiter",
-                        "hr_admin",
-                      ].includes(
-                        u.role
-                      )
-                    )
-                    .map((u) => (
+                  {RECRUITERS.map(
+                    (recruiter) => (
                       <SelectItem
-                        key={u.id}
-                        value={u.id}
+                        key={recruiter.id}
+                        value={recruiter.id}
                       >
-                        {u.name}
+                        {recruiter.name}
                       </SelectItem>
-                    ))}
+                    )
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Hiring Manager */}
+            {/* =====================================
+                HIRING MANAGER - MANUAL DROPDOWN
+            ===================================== */}
 
             <div className="space-y-1">
               <Label>
@@ -1036,48 +1143,45 @@ export default function JobWizard() {
 
               <Select
                 value={
-                  form.hiring_manager_id
+                  form.hiring_manager_id ||
+                  ""
                 }
-                onValueChange={(v) => {
-                  const u =
-                    users.find(
-                      (x) =>
-                        x.id === v
+                onValueChange={(value) => {
+                  const manager =
+                    HIRING_MANAGERS.find(
+                      (item) =>
+                        item.id === value
                     );
 
                   set(
                     "hiring_manager_id",
-                    v
+                    manager?.id || ""
                   );
 
                   set(
                     "hiring_manager_name",
-                    u?.name || ""
+                    manager?.name || ""
                   );
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  data-testid="job-hiring-manager-select"
+                  className="w-full"
+                >
                   <SelectValue placeholder="Assign manager" />
                 </SelectTrigger>
 
                 <SelectContent>
-                  {users
-                    .filter((u) =>
-                      [
-                        "hiring_manager",
-                        "org_admin",
-                      ].includes(
-                        u.role
-                      )
-                    )
-                    .map((u) => (
+                  {HIRING_MANAGERS.map(
+                    (manager) => (
                       <SelectItem
-                        key={u.id}
-                        value={u.id}
+                        key={manager.id}
+                        value={manager.id}
                       >
-                        {u.name}
+                        {manager.name}
                       </SelectItem>
-                    ))}
+                    )
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1154,6 +1258,8 @@ export default function JobWizard() {
                 placeholder="Add a responsibility & press Enter"
               />
             </div>
+
+            {/* Skills */}
 
             <div className="grid grid-cols-2 gap-4">
 
@@ -1269,6 +1375,8 @@ export default function JobWizard() {
         {step === 2 && (
           <div className="grid grid-cols-2 gap-6">
 
+            {/* Mandatory */}
+
             <div className="space-y-1">
               <Label className="text-[#0a2540] font-semibold">
                 Mandatory Requirements
@@ -1292,6 +1400,8 @@ export default function JobWizard() {
                 placeholder="Add requirement"
               />
             </div>
+
+            {/* Preferred */}
 
             <div className="space-y-1">
               <Label className="text-[#0a2540] font-semibold">
@@ -1339,7 +1449,6 @@ export default function JobWizard() {
                 onClick={addQuestion}
               >
                 <Plus className="h-4 w-4 mr-1" />
-
                 Add Question
               </Button>
             </div>
@@ -1440,7 +1549,9 @@ export default function JobWizard() {
                   <label className="flex items-center gap-2 text-xs text-slate-600">
                     <input
                       type="checkbox"
-                      checked={q.mandatory}
+                      checked={
+                        q.mandatory
+                      }
                       onChange={(e) =>
                         updateQ(
                           i,
@@ -1491,9 +1602,11 @@ export default function JobWizard() {
 
                   <Slider
                     value={[
-                      form.ats_config[
-                        key
-                      ],
+                      Number(
+                        form.ats_config[
+                          key
+                        ]
+                      ),
                     ]}
                     max={60}
                     step={5}
@@ -1558,12 +1671,16 @@ export default function JobWizard() {
             className="space-y-4"
             data-testid="review-section"
           >
+
             <h3 className="font-display font-bold text-lg text-[#0a2540]">
               {form.title ||
                 "Untitled"}
             </h3>
 
+            {/* Basic Information */}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+
               {[
                 [
                   "Company",
@@ -1592,6 +1709,14 @@ export default function JobWizard() {
                 [
                   "Openings",
                   form.openings,
+                ],
+                [
+                  "Recruiter",
+                  form.recruiter_name,
+                ],
+                [
+                  "Hiring Manager",
+                  form.hiring_manager_name,
                 ],
               ].map(
                 ([label, value]) => (
@@ -1646,9 +1771,9 @@ export default function JobWizard() {
 
               <div className="flex flex-wrap gap-1.5">
                 {form.required_skills.map(
-                  (s) => (
+                  (s, i) => (
                     <span
-                      key={s}
+                      key={`${s}-${i}`}
                       className="rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs"
                     >
                       {s}
@@ -1697,41 +1822,41 @@ export default function JobWizard() {
           </div>
         )}
 
-        {/* Bottom Navigation */}
+        {/* =========================================
+            BOTTOM NAVIGATION
+        ========================================= */}
 
         <div className="flex items-center justify-between mt-8 pt-4 border-t border-slate-100">
 
           <Button
-            variant="outline"
-            onClick={() =>
-              setStep((s) =>
-                Math.max(0, s - 1)
-              )
-            }
-            disabled={step === 0}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
+  variant="outline"
+  onClick={() => {
+    if (step === 0) {
+      navigate("/jobs");
+    } else {
+      setStep((s) => s - 1);
+    }
+  }}
+>
+  <ChevronLeft className="h-4 w-4 mr-1" />
+  Back
+</Button>
 
-            Back
-          </Button>
-
-          {step <
-          STEPS.length - 1 ? (
+          {step < STEPS.length - 1 ? (
             <Button
+              type="button"
               data-testid="wizard-next"
               className="bg-[#1e5bff] hover:bg-[#154cdb]"
               onClick={() =>
-                setStep((s) =>
-                  s + 1
-                )
+                setStep((s) => s + 1)
               }
             >
               Next
-
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
             <Button
+              type="button"
               data-testid="publish-job-btn"
               className="bg-emerald-500 hover:bg-emerald-600"
               disabled={
