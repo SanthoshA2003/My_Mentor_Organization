@@ -914,15 +914,23 @@ const resetPw = async () => {
                     TABLE BODY
                 ================================================= */}
 
-                <tbody>
+               <tbody>
 
-                 {filtered.map((user) => {
+  {filtered.map((user) => {
 
-  const status = user.is_active
-    ? "active"
-    : "inactive";
+    console.log("RENDERING USER:", {
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    });
 
-  return (
+    const status = user.is_active
+      ? "active"
+      : "inactive";
+
+    return (
+      
     <tr
       key={user.id}
       className="border-t border-slate-100 hover:bg-slate-50 transition-colors duration-150"
@@ -952,10 +960,10 @@ const resetPw = async () => {
       </td>
 
 
-      {/* PHONE */}
-      <td className="px-4 py-3 text-slate-600">
-        {user.phone || "—"}
-      </td>
+     {/* PHONE */}
+<td className="px-4 py-3 text-slate-600">
+  {user.phone ? String(user.phone).trim() : "—"}
+</td>
 
 
       {/* ROLE */}

@@ -161,6 +161,7 @@ export default function Dashboard() {
 const organization = data.organization || {};
 const candidates = data.candidates || {};
 const recruitmentFunnel = data.recruitment_funnel || {};
+const candidateQuality = data.candidate_quality || {};
 
 const jobOverview = Array.isArray(data.active_jobs)
   ? data.active_jobs
@@ -317,23 +318,61 @@ const funnel = [
   ========================================================== */
 
 
- /* ==========================================================
+/* ==========================================================
    CANDIDATE QUALITY
-   Not available in current Dashboard API.
-   Keep UI unchanged and show empty values.
 ========================================================== */
 
-const quality = {};
+const avgATS = numberValue(
+  candidateQuality.average_ats_score
+);
 
-const avgATS = "";
+const avgMatch = numberValue(
+  candidateQuality.average_match_score
+);
 
-const avgMatch = "";
+const above90 = numberValue(
+  candidateQuality.above_90
+);
 
-const above90 = "";
+const below60 = numberValue(
+  candidateQuality.below_60
+);
 
-const below60 = "";
+const scoreDistribution =
+  candidateQuality.score_distribution || {};
 
-const qualityDistribution = [];
+const qualityDistribution = [
+  {
+    band: "90-100",
+    count: numberValue(
+      scoreDistribution.score_90_100
+    ),
+  },
+  {
+    band: "80-89",
+    count: numberValue(
+      scoreDistribution.score_80_89
+    ),
+  },
+  {
+    band: "70-79",
+    count: numberValue(
+      scoreDistribution.score_70_79
+    ),
+  },
+  {
+    band: "60-69",
+    count: numberValue(
+      scoreDistribution.score_60_69
+    ),
+  },
+  {
+    band: "<60",
+    count: numberValue(
+      scoreDistribution.below_60
+    ),
+  },
+];
 
   /* ==========================================================
      DISPLAY
@@ -841,55 +880,38 @@ const qualityDistribution = [];
 
             <div className="space-y-1">
 
-              {recentActivity.map(
-                (activity, index) => {
+             {recentActivity.map((activity, index) => {
 
-                  const createdAt =
-                    activity.created_at ||
-                    activity.timestamp ||
-                    activity.date;
+  const createdAt = activity.created_at;
 
-                  return (
-                    <div
-                      key={
-                        activity.id ||
-                        index
-                      }
-                      className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0"
-                    >
+  return (
+    <div
+      key={activity.id || index}
+      className="flex items-center gap-3 py-3 border-b border-slate-50 last:border-0"
+    >
 
-                      <div className="h-2 w-2 rounded-full bg-[#17b6c7] shrink-0" />
+      {/* Activity dot */}
+      <div className="h-2 w-2 rounded-full bg-[#17b6c7] shrink-0" />
 
-                      <div className="flex-1 text-sm text-slate-700">
+      {/* Activity text */}
+      <div className="flex-1 text-sm text-slate-700">
+        {activity.activity || "-"}
+      </div>
 
-                        {activity.text ||
-                          activity.message ||
-                          activity.description ||
-                          "-"}
+      {/* Date / Time */}
+      {createdAt && (
+        <div className="text-xs text-slate-400 whitespace-nowrap">
+          {new Date(createdAt).toLocaleDateString()}{" "}
+          {new Date(createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
+      )}
 
-                      </div>
-
-                      {createdAt && (
-                        <div className="text-xs text-slate-400">
-                          {new Date(
-                            createdAt
-                          ).toLocaleDateString()}{" "}
-                          {new Date(
-                            createdAt
-                          ).toLocaleTimeString(
-                            [],
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </div>
-                      )}
-
-                    </div>
-                  );
-                }
-              )}
+    </div>
+  );
+})}
 
             </div>
 
