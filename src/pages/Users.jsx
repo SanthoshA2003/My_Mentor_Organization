@@ -70,17 +70,17 @@ const ROLE_LABELS = {
     ROLE FORMATTER
   ============================================================ */
 
-  const formatRole = (role) => {
-    if (!role) return "—";
+ const formatRole = (role) => {
+  if (!role) return "Not assigned";
 
-    if (ROLE_LABELS[role]) {
-      return ROLE_LABELS[role];
-    }
+  if (ROLE_LABELS[role]) {
+    return ROLE_LABELS[role];
+  }
 
-    return String(role)
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  };
+  return String(role)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
 
   /* ============================================================
     AVATAR INITIALS
@@ -914,23 +914,15 @@ const resetPw = async () => {
                     TABLE BODY
                 ================================================= */}
 
-               <tbody>
+                <tbody>
 
-  {filtered.map((user) => {
+                 {filtered.map((user) => {
 
-    console.log("RENDERING USER:", {
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-    });
+  const status = user.is_active
+    ? "active"
+    : "inactive";
 
-    const status = user.is_active
-      ? "active"
-      : "inactive";
-
-    return (
-      
+  return (
     <tr
       key={user.id}
       className="border-t border-slate-100 hover:bg-slate-50 transition-colors duration-150"
@@ -954,16 +946,15 @@ const resetPw = async () => {
       </td>
 
 
-      {/* EMAIL */}
       <td className="px-4 py-3 text-slate-600">
-        {user.email || "—"}
-      </td>
-
-
-     {/* PHONE */}
-<td className="px-4 py-3 text-slate-600">
-  {user.phone ? String(user.phone).trim() : "—"}
+  {user.email || "Not provided"}
 </td>
+
+
+      {/* PHONE */}
+      <td className="px-4 py-3 text-slate-600">
+        {user.phone || "Not provided"}
+      </td>
 
 
       {/* ROLE */}
@@ -972,10 +963,9 @@ const resetPw = async () => {
       </td>
 
 
-      {/* DEPARTMENT */}
       <td className="px-4 py-3 text-slate-600">
-        {user.department || "—"}
-      </td>
+  {user.department || "Not assigned"}
+</td>
 
 
       {/* STATUS */}
@@ -988,11 +978,11 @@ const resetPw = async () => {
 
 
 
-      {/* LAST LOGIN */}
-      <td className="px-4 py-3 text-slate-500 text-xs">
-        {formatDate(user.last_login)}
-      </td>
-
+    <td className="px-4 py-3 text-slate-500 text-xs">
+  {user.last_login
+    ? formatDate(user.last_login)
+    : "Never logged in"}
+</td>
 
       {/* ACTIONS */}
       <td className="px-4 py-3">

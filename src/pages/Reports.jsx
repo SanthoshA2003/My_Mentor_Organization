@@ -77,17 +77,33 @@ export default function Reports() {
       });
   }, []);
 
-  // =========================================================
-  // EXPORT
-  // =========================================================
-  const exportCsv = async (kind) => {
+ // =========================================================
+// EXPORT REPORT
+// =========================================================
+
+const exportReport = async (type) => {
   try {
-    const response = await api.get(
-      `/reports/export?kind=${kind}`,
-      {
-        responseType: "blob",
-      }
-    );
+    let endpoint;
+    let filename;
+
+    if (type === "overview") {
+      endpoint = "/reports/export/overview";
+      filename = "recruitment_overview.csv";
+    } else if (type === "job_performance") {
+      endpoint = "/reports/export/job-performance";
+      filename = "job_performance.csv";
+    } else {
+      return;
+    }
+
+    console.log("Exporting report:", {
+      endpoint,
+      filename,
+    });
+
+    const response = await api.get(endpoint, {
+      responseType: "blob",
+    });
 
     const blob = new Blob([response.data], {
       type: "text/csv;charset=utf-8;",
@@ -98,10 +114,7 @@ export default function Reports() {
     const link = document.createElement("a");
 
     link.href = url;
-    link.download =
-      kind === "overview"
-        ? "recruitment_overview.csv"
-        : "job_performance.csv";
+    link.download = filename;
 
     document.body.appendChild(link);
 
@@ -110,8 +123,19 @@ export default function Reports() {
     document.body.removeChild(link);
 
     window.URL.revokeObjectURL(url);
+
   } catch (error) {
-    console.error("Export error:", error);
+    console.error("Report export error:", error);
+
+    console.error(
+      "Status:",
+      error.response?.status
+    );
+
+    console.error(
+      "Response:",
+      error.response?.data
+    );
   }
 };
 
@@ -265,7 +289,7 @@ export default function Reports() {
   <Button
     variant="outline"
     data-testid="export-overview-btn"
-    onClick={() => exportCsv("overview")}
+    onClick={() => exportReport("overview")}
     className="
       h-10
       border-slate-200
@@ -284,7 +308,7 @@ export default function Reports() {
   <Button
     variant="outline"
     data-testid="export-jobperf-btn"
-    onClick={() => exportCsv("job_performance")}
+    onClick={() => exportReport("job_performance")}
     className="
       h-10
       border-slate-200
