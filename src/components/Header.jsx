@@ -20,17 +20,72 @@ export function Header({ collapsed }) {
   const { user, org, logout } = useAuth();
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState([]);
+const [unreadCount, setUnreadCount] = useState(0);
   const [q, setQ] = useState("");
   const [results, setResults] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const timer = useRef();
 
-  const loadNotifs = async () => {
-    try { const { data } = await api.get("/notifications"); setNotifs(data); } catch (e) {}
-  };
+ const loadNotifs = async () => {
+  try {
+    const [notificationsResponse, unreadResponse] =
+      await Promise.all([
+        api.get("/notifications"),
+        api.get("/notifications/unread-count"),
+      ]);
+
+    console.log(
+      "Notifications API:",
+      notificationsResponse.data
+    );
+
+    console.log(
+      "Unread Count API:",
+      unreadResponse.data
+    );
+
+    // Notifications list
+    setNotifs(
+      Array.isArray(
+        notificationsResponse.data?.notifications
+      )
+        ? notificationsResponse.data.notifications
+        : []
+    );
+
+    // Unread count
+    const count =
+      typeof unreadResponse.data === "number"
+        ? unreadResponse.data
+        : Number(
+            unreadResponse.data?.unread_count || 0
+          );
+
+    setUnreadCount(count);
+
+  } catch (error) {
+    console.error(
+      "Notifications API error:",
+      error
+    );
+
+    console.error(
+      "Status:",
+      error.response?.status
+    );
+
+    console.error(
+      "Response:",
+      error.response?.data
+    );
+
+    setNotifs([]);
+    setUnreadCount(0);
+  }
+};
+
   useEffect(() => { loadNotifs(); }, []);
 
-  const unread = notifs.filter((n) => !n.read).length;
 
   const onSearch = (val) => {
     setQ(val);
@@ -41,13 +96,51 @@ export function Header({ collapsed }) {
     }, 250);
   };
 
-  const markRead = async (n) => {
-    await api.post(`/notifications/${n.id}/read`);
-    loadNotifs();
-    if (n.link) navigate(n.link);
-  };
+ const markRead = async (notification) => {
+  try {
+    await api.put(
+      `/notifications/${notification.id}/read`
+    );
+
+    await loadNotifs();
+
+    if (notification.link) {
+      navigate(notification.link);
+    }
+
+  } catch (error) {
+    console.error(
+      "Mark notification as read error:",
+      error
+    );
+  }
+};
 
   const initials = (user?.name || "U").split(" ").map((s) => s[0]).slice(0, 2).join("");
+
+  const markAllRead = async () => {
+  try {
+    const unreadNotifications = notifs.filter(
+      (notification) => !notification.is_read
+    );
+
+    await Promise.all(
+      unreadNotifications.map((notification) =>
+        api.put(
+          `/notifications/${notification.id}/read`
+        )
+      )
+    );
+
+    await loadNotifs();
+
+  } catch (error) {
+    console.error(
+      "Mark all notifications as read error:",
+      error
+    );
+  }
+};
 
   return (
     <header
@@ -116,20 +209,57 @@ export function Header({ collapsed }) {
           <DropdownMenuTrigger asChild>
             <button data-testid="notifications-btn" className="relative h-9 w-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors duration-200">
               <Bell className="h-5 w-5" />
-              {unread > 0 && <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-[#1e5bff] text-white text-[10px] font-bold flex items-center justify-center">{unread}</span>}
+{unreadCount > 0 && (
+  <span
+    className="
+      absolute
+      top-1
+      right-1
+      h-4
+      min-w-4
+      px-1
+      rounded-full
+      bg-[#1e5bff]
+      text-white
+      text-[10px]
+      font-bold
+      flex
+      items-center
+      justify-center
+    "
+  >
+    {unreadCount}
+  </span>
+)}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <div className="flex items-center justify-between px-2 py-1.5">
               <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
-              <button data-testid="mark-all-read-btn" onClick={async () => { await api.post("/notifications/read-all"); loadNotifs(); }} className="text-xs text-[#1e5bff] hover:underline">Mark all read</button>
+<button
+  data-testid="mark-all-read-btn"
+  onClick={markAllRead}
+  className="text-xs text-[#1e5bff] hover:underline"
+>
+  Mark all read
+</button>
             </div>
             <DropdownMenuSeparator />
             {notifs.length === 0 && <div className="p-4 text-sm text-slate-500">No notifications.</div>}
             {notifs.map((n) => (
               <DropdownMenuItem key={n.id} data-testid={`notif-${n.id}`} onClick={() => markRead(n)} className="flex flex-col items-start gap-0.5 py-2 cursor-pointer">
-                <span className={cn("text-sm", !n.read && "font-semibold text-[#0a2540]")}>{n.title}</span>
-                <span className="text-xs text-slate-500">{n.body}</span>
+              <span
+  className={cn(
+    "text-sm",
+    !n.is_read && "font-semibold text-[#0a2540]"
+  )}
+>
+  {n.title}
+</span>
+
+<span className="text-xs text-slate-500">
+  {n.message}
+</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
