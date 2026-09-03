@@ -26,6 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  CartesianGrid,
 } from "recharts";
 
 const funnelColors = [
@@ -36,6 +37,14 @@ const funnelColors = [
   "#14b8a6",
   "#22c55e",
   "#16a34a",
+];
+
+const qualityColors = [
+  "#22c55e", // 90-100 - Green
+  "#16a34a", // 80-89  - Dark Green
+  "#17b6c7", // 70-79  - Cyan
+  "#f59e0b", // 60-69  - Orange
+  "#ef4444", // <60    - Red
 ];
 
 export default function Reports() {
@@ -618,66 +627,92 @@ export default function Reports() {
               Score Distribution
             </h3>
 
-            <ResponsiveContainer
-              width="100%"
-              height={220}
-            >
+          <ResponsiveContainer
+  width="100%"
+  height={240}
+>
+  <BarChart
+    data={qualityChartData}
+    margin={{
+      top: 10,
+      right: 10,
+      left: 0,
+      bottom: 5,
+    }}
+  >
+    <CartesianGrid
+      strokeDasharray="3 3"
+      vertical={false}
+      stroke="#e2e8f0"
+    />
 
-              <BarChart
-                data={qualityChartData}
-              >
+    <XAxis
+      dataKey="band"
+      tick={{
+        fontSize: 11,
+        fill: "#64748b",
+      }}
+      axisLine={{
+        stroke: "#94a3b8",
+      }}
+      tickLine={false}
+    />
 
-                <XAxis
-                  dataKey="band"
-                  tick={{
-                    fontSize: 11,
-                  }}
-                />
+    <YAxis
+      tick={{
+        fontSize: 11,
+        fill: "#64748b",
+      }}
+      axisLine={{
+        stroke: "#94a3b8",
+      }}
+      tickLine={false}
+      allowDecimals={false}
+    />
 
-                <YAxis
-                  tick={{
-                    fontSize: 11,
-                  }}
-                />
+    <Tooltip
+      cursor={{
+        fill: "#f1f5f9",
+      }}
+      contentStyle={{
+        backgroundColor: "#ffffff",
+        border: "1px solid #cbd5e1",
+        borderRadius: "4px",
+        padding: "10px 12px",
+        boxShadow:
+          "0 2px 6px rgba(0,0,0,0.08)",
+      }}
+      labelStyle={{
+        color: "#0a2540",
+        fontWeight: 600,
+      }}
+      formatter={(value) => [
+        value,
+        "count",
+      ]}
+    />
 
-                <Tooltip
-                  cursor={{
-                    fill: "#f1f5f9",
-                  }}
-                />
-
-                <Bar
-                  dataKey="count"
-                  radius={[
-                    4,
-                    4,
-                    0,
-                    0,
-                  ]}
-                >
-
-                  {qualityChartData.map(
-                    (_, i) => (
-                      <Cell
-                        key={i}
-                        fill={
-                          [
-                            "#22c55e",
-                            "#16a34a",
-                            "#17b6c7",
-                            "#f59e0b",
-                            "#ef4444",
-                          ][i]
-                        }
-                      />
-                    )
-                  )}
-
-                </Bar>
-
-              </BarChart>
-
-            </ResponsiveContainer>
+    <Bar
+      dataKey="count"
+      radius={[
+        5,
+        5,
+        0,
+        0,
+      ]}
+      barSize={80}
+    >
+      {qualityChartData.map(
+        (_, index) => (
+          <Cell
+            key={`quality-cell-${index}`}
+            fill={qualityColors[index]}
+          />
+        )
+      )}
+    </Bar>
+  </BarChart>
+</ResponsiveContainer>
 
           </Card>
 

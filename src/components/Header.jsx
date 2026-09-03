@@ -148,7 +148,7 @@ export function Header({ collapsed }) {
               </Avatar>
               <div className="text-left hidden md:block">
                 <div className="text-sm font-medium text-[#0a2540] leading-tight">{user?.name}</div>
-                <div className="text-[11px] text-slate-500 leading-tight">{ROLE_LABELS[user?.role]}</div>
+                <div className="text-[11px] text-slate-500 leading-tight">{ROLE_LABELS[user?.role] || user?.role || "User"}</div>
               </div>
               <ChevronDown className="h-4 w-4 text-slate-400 hidden md:block" />
             </button>

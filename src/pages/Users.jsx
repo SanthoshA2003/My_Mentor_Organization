@@ -1,4 +1,4 @@
-  import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
   import { api, formatApiError } from "@/lib/api";
   import { useAuth } from "@/context/AuthContext";
 
@@ -134,6 +134,11 @@ const ROLE_LABELS = {
     const [q, setQ] = useState("");
 
     const [open, setOpen] = useState(false);
+    const [resetOpen, setResetOpen] = useState(false);
+const [resetUser, setResetUser] = useState(null);
+const [newPassword, setNewPassword] = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
+const [resetLoading, setResetLoading] = useState(false);
 
     const [form, setForm] = useState({
   first_name: "",
@@ -338,12 +343,19 @@ const createUser = async () => {
   try {
     const newStatus = !user.is_active;
 
-    await api.patch(
+    console.log("Updating member status:", {
+      memberId: user.id,
+      is_active: newStatus,
+    });
+
+    const { data } = await api.put(
       `/organizations/me/members/${user.id}/status`,
       {
         is_active: newStatus,
       }
     );
+
+    console.log("Update member status response:", data);
 
     toast.success(
       newStatus
@@ -354,25 +366,14 @@ const createUser = async () => {
     await load();
 
   } catch (error) {
-    console.error(
-      "Update member status error:",
-      error
-    );
-
-    console.error(
-      "Status:",
-      error.response?.status
-    );
-
-    console.error(
-      "Response:",
-      error.response?.data
-    );
+    console.error("Update member status error:", error);
+    console.error("Status:", error.response?.status);
+    console.error("Response:", error.response?.data);
 
     toast.error(
-      formatApiError(
-        error.response?.data?.detail
-      )
+      formatApiError(error.response?.data?.detail) ||
+        error.response?.data?.message ||
+        "Failed to update user status."
     );
   }
 };
@@ -381,36 +382,72 @@ const createUser = async () => {
       RESET PASSWORD
     ========================================================== */
 
-    const resetPw = async (user) => {
-      try {
-        const { data } = await api.post(
-          `/users/${user.id}/reset-password`
-        );
+    const openResetPassword = (user) => {
+  setResetUser(user);
+  setNewPassword("");
+  setConfirmPassword("");
+  setResetOpen(true);
+};
 
-        if (data?.simulated_reset_link) {
-          navigator.clipboard?.writeText(
-            window.location.origin +
-              data.simulated_reset_link
-          );
-        }
+const resetPw = async () => {
+  if (!resetUser) return;
 
-        toast.success(
-          "Reset link generated & copied (simulated)"
-        );
-      } catch (error) {
-        console.error(
-          "Reset password error:",
-          error
-        );
+  if (!newPassword) {
+    toast.error("Please enter a new password.");
+    return;
+  }
 
-        toast.error(
-          formatApiError(
-            error.response?.data?.detail
-          )
-        );
+  if (newPassword.length < 6) {
+    toast.error("Password must be at least 6 characters.");
+    return;
+  }
+
+  if (!confirmPassword) {
+    toast.error("Please re-enter the password.");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    toast.error("Passwords do not match.");
+    return;
+  }
+
+  try {
+    setResetLoading(true);
+
+    const { data } = await api.put(
+      `/organizations/me/members/${resetUser.id}/password`,
+      {
+        password: newPassword,
       }
-    };
+    );
 
+    console.log("Password reset response:", data);
+
+    toast.success(
+      data?.message || "Password updated successfully."
+    );
+
+    setResetOpen(false);
+    setResetUser(null);
+    setNewPassword("");
+    setConfirmPassword("");
+
+  } catch (error) {
+    console.error(
+      "Reset password error:",
+      error.response?.data || error
+    );
+
+    toast.error(
+      formatApiError(error.response?.data?.detail) ||
+        error.response?.data?.message ||
+        "Failed to reset password."
+    );
+  } finally {
+    setResetLoading(false);
+  }
+};
     /* ==========================================================
       DELETE USER
     ========================================================== */
@@ -979,12 +1016,11 @@ const createUser = async () => {
             </DropdownMenuItem>
 
 
-            {/* Reset Password */}
             <DropdownMenuItem
-              onClick={() => resetPw(user)}
-            >
-              Reset Password
-            </DropdownMenuItem>
+  onClick={() => openResetPassword(user)}
+>
+  Reset Password
+</DropdownMenuItem>
 
 
             {/* Delete */}
@@ -1014,6 +1050,110 @@ const createUser = async () => {
           )}
 
         </Card>
+        <Dialog
+  open={resetOpen}
+  onOpenChange={(value) => {
+    setResetOpen(value);
+
+    if (!value) {
+      setResetUser(null);
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  }}
+>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle className="text-xl font-bold text-[#0a2540]">
+        Reset Password
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-5 py-3">
+
+      {resetUser && (
+        <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+          <p className="text-sm text-slate-500">
+            Reset password for
+          </p>
+          <p className="font-semibold text-[#0a2540]">
+            {resetUser.name}
+          </p>
+          <p className="text-sm text-slate-500">
+            {resetUser.email}
+          </p>
+        </div>
+      )}
+
+      {/* New Password */}
+      <div className="space-y-2">
+        <Label htmlFor="reset-new-password">
+          New Password
+        </Label>
+
+        <Input
+          id="reset-new-password"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Enter new password"
+          autoComplete="new-password"
+          className="h-11"
+        />
+      </div>
+
+      {/* Confirm Password */}
+      <div className="space-y-2">
+        <Label htmlFor="reset-confirm-password">
+          Re-enter Password
+        </Label>
+
+        <Input
+          id="reset-confirm-password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Re-enter password"
+          autoComplete="new-password"
+          className="h-11"
+        />
+      </div>
+
+      {confirmPassword &&
+        newPassword !== confirmPassword && (
+          <p className="text-sm text-red-600">
+            Passwords do not match.
+          </p>
+        )}
+
+    </div>
+
+    <DialogFooter>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setResetOpen(false)}
+        disabled={resetLoading}
+      >
+        Cancel
+      </Button>
+
+      <Button
+        type="button"
+        onClick={resetPw}
+        disabled={
+          resetLoading ||
+          !newPassword ||
+          !confirmPassword ||
+          newPassword !== confirmPassword
+        }
+        className="bg-[#1e5bff] hover:bg-[#154cdb]"
+      >
+        {resetLoading ? "Changing..." : "Change Password"}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       </div>
     );

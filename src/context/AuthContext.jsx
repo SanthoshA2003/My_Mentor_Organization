@@ -16,6 +16,103 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /* ============================================================
+     GET ORGANIZATION MEMBER
+  ============================================================ */
+
+  const getOrganizationMember = async (currentUser) => {
+    try {
+      if (!currentUser?.email) {
+        console.error("❌ Current user email is missing");
+        return null;
+      }
+
+      console.log(
+        "Finding organization member for:",
+        currentUser.email
+      );
+
+      const response = await api.get(
+        "/organizations/me/members"
+      );
+
+      console.log(
+        "ORGANIZATION MEMBERS RESPONSE:",
+        response.data
+      );
+
+      const data = response.data;
+
+      // Handle different possible API response formats
+      const members = Array.isArray(data)
+        ? data
+        : data?.members ||
+          data?.items ||
+          data?.data ||
+          [];
+
+      console.log(
+        "ORGANIZATION MEMBERS ARRAY:",
+        members
+      );
+
+      const member = members.find(
+        (item) =>
+          item.email?.trim().toLowerCase() ===
+          currentUser.email.trim().toLowerCase()
+      );
+
+      console.log(
+        "MATCHED ORGANIZATION MEMBER:",
+        member
+      );
+
+      if (!member) {
+        console.error(
+          "❌ Organization member not found"
+        );
+
+        console.error(
+          "Auth email:",
+          currentUser.email
+        );
+
+        console.error(
+          "Available emails:",
+          members.map((item) => item.email)
+        );
+
+        return null;
+      }
+
+      console.log(
+        "✅ ORGANIZATION MEMBER ID:",
+        member.id
+      );
+
+      return member;
+
+    } catch (error) {
+      console.error(
+        "❌ GET ORGANIZATION MEMBER ERROR:",
+        error
+      );
+
+      console.error(
+        "STATUS:",
+        error.response?.status
+      );
+
+      console.error(
+        "RESPONSE:",
+        error.response?.data
+      );
+
+      return null;
+    }
+  };
+
+
+  /* ============================================================
      LOAD CURRENT USER
   ============================================================ */
 
@@ -24,7 +121,10 @@ export function AuthProvider({ children }) {
       localStorage.getItem("mm_token") ||
       sessionStorage.getItem("mm_token");
 
-    console.log("LOAD ME - TOKEN EXISTS:", !!token);
+    console.log(
+      "LOAD ME - TOKEN EXISTS:",
+      !!token
+    );
 
     if (!token) {
       setUser(null);
@@ -36,49 +136,147 @@ export function AuthProvider({ children }) {
     try {
       const response = await api.get("/auth/me");
 
-      console.log("AUTH ME RESPONSE:", response.data);
+      console.log(
+        "AUTH ME RESPONSE:",
+        response.data
+      );
 
       const data = response.data;
 
-      /*
-        Support both:
+      const currentUser =
+        data?.user || data;
 
-        {
-          "user": {...},
-          "organization": {...}
-        }
+      const organization =
+        data?.organization || null;
 
-        OR
+      console.log(
+        "CURRENT AUTH USER:",
+        currentUser
+      );
 
-        {
-          "id": "...",
-          "name": "...",
-          ...
-        }
-      */
+      console.log(
+        "AUTH USER ID:",
+        currentUser?.id
+      );
 
-      const currentUser = data?.user || data;
-      const organization = data?.organization || null;
+      console.log(
+        "AUTH USER EMAIL:",
+        currentUser?.email
+      );
 
-      console.log("CURRENT USER:", currentUser);
-      console.log("ORGANIZATION:", organization);
+      // Get actual organization member
+      const member =
+        await getOrganizationMember(
+          currentUser
+        );
 
-      setUser(currentUser);
+      // Merge member information into user
+      const finalUser = {
+        ...currentUser,
+
+        // IMPORTANT
+        member_id: member?.id || null,
+
+        // Member fields
+        name:
+          member?.name ||
+          currentUser?.name ||
+          "",
+
+        email:
+          member?.email ||
+          currentUser?.email ||
+          "",
+
+        phone:
+          member?.phone ||
+          currentUser?.phone ||
+          "",
+
+        department:
+          member?.department ||
+          currentUser?.department ||
+          "",
+
+        designation:
+          member?.designation ||
+          currentUser?.designation ||
+          "",
+
+        role:
+          member?.role ||
+          currentUser?.role ||
+          "",
+      };
+
+      console.log(
+        "========== FINAL USER =========="
+      );
+
+      console.log(
+        "USER ID:",
+        finalUser.id
+      );
+
+      console.log(
+        "MEMBER ID:",
+        finalUser.member_id
+      );
+
+      console.log(
+        "NAME:",
+        finalUser.name
+      );
+
+      console.log(
+        "EMAIL:",
+        finalUser.email
+      );
+
+      console.log(
+        "PHONE:",
+        finalUser.phone
+      );
+
+      console.log(
+        "ROLE:",
+        finalUser.role
+      );
+
+      console.log(
+        "==============================="
+      );
+
+      setUser(finalUser);
       setOrg(organization);
+
     } catch (error) {
-      console.error("AUTH ME ERROR:", error);
-      console.error("STATUS:", error.response?.status);
-      console.error("RESPONSE:", error.response?.data);
+      console.error(
+        "AUTH ME ERROR:",
+        error
+      );
+
+      console.error(
+        "STATUS:",
+        error.response?.status
+      );
+
+      console.error(
+        "RESPONSE:",
+        error.response?.data
+      );
 
       localStorage.removeItem("mm_token");
       sessionStorage.removeItem("mm_token");
 
       setUser(null);
       setOrg(null);
+
     } finally {
       setLoading(false);
     }
   }, []);
+
 
   /* ============================================================
      INITIAL AUTH CHECK
@@ -88,38 +286,72 @@ export function AuthProvider({ children }) {
     loadMe();
   }, [loadMe]);
 
+
   /* ============================================================
      ADMIN LOGIN
   ============================================================ */
 
-  const login = async (email, password, remember = true) => {
+  const login = async (
+    email,
+    password,
+    remember = true
+  ) => {
     try {
-      console.log("=================================");
-      console.log("ADMIN LOGIN START");
-      console.log("EMAIL:", email);
-      console.log("=================================");
+      console.log(
+        "================================="
+      );
 
-      /* --------------------------------------------------------
-         1. LOGIN API
-      -------------------------------------------------------- */
+      console.log(
+        "ADMIN LOGIN START"
+      );
 
-      const response = await api.post("/auth/admin/login", {
-        email,
-        password,
-      });
+      console.log(
+        "EMAIL:",
+        email
+      );
+
+      console.log(
+        "================================="
+      );
+
+
+      // ==========================================
+      // 1. LOGIN
+      // ==========================================
+
+      const response = await api.post(
+        "/auth/admin/login",
+        {
+          email,
+          password,
+        }
+      );
 
       const data = response.data;
 
-      console.log("ADMIN LOGIN RESPONSE:", data);
-      console.log("LOGIN STATUS:", response.status);
+      console.log(
+        "ADMIN LOGIN RESPONSE:",
+        data
+      );
 
-      /* --------------------------------------------------------
-         2. GET TOKEN
-      -------------------------------------------------------- */
+      console.log(
+        "LOGIN STATUS:",
+        response.status
+      );
 
-      const token = data?.token || data?.access_token;
 
-      console.log("TOKEN RECEIVED:", !!token);
+      // ==========================================
+      // 2. TOKEN
+      // ==========================================
+
+      const token =
+        data?.token ||
+        data?.access_token;
+
+      console.log(
+        "TOKEN RECEIVED:",
+        !!token
+      );
 
       if (!token) {
         throw new Error(
@@ -127,92 +359,220 @@ export function AuthProvider({ children }) {
         );
       }
 
-      /* --------------------------------------------------------
-         3. REMOVE OLD TOKENS
-      -------------------------------------------------------- */
 
-      localStorage.removeItem("mm_token");
-      sessionStorage.removeItem("mm_token");
+      // ==========================================
+      // 3. REMOVE OLD TOKENS
+      // ==========================================
 
-      /* --------------------------------------------------------
-         4. SAVE NEW TOKEN
-      -------------------------------------------------------- */
+      localStorage.removeItem(
+        "mm_token"
+      );
+
+      sessionStorage.removeItem(
+        "mm_token"
+      );
+
+
+      // ==========================================
+      // 4. SAVE TOKEN
+      // ==========================================
 
       if (remember) {
-        localStorage.setItem("mm_token", token);
-        console.log("TOKEN SAVED TO LOCAL STORAGE");
+        localStorage.setItem(
+          "mm_token",
+          token
+        );
+
+        console.log(
+          "TOKEN SAVED TO LOCAL STORAGE"
+        );
       } else {
-        sessionStorage.setItem("mm_token", token);
-        console.log("TOKEN SAVED TO SESSION STORAGE");
+        sessionStorage.setItem(
+          "mm_token",
+          token
+        );
+
+        console.log(
+          "TOKEN SAVED TO SESSION STORAGE"
+        );
       }
 
-      /* --------------------------------------------------------
-         5. GET CURRENT LOGGED-IN USER
-         
-         IMPORTANT:
-         This is the missing part in your current code.
-      -------------------------------------------------------- */
 
-      console.log("CALLING /auth/me...");
+      // ==========================================
+      // 5. GET AUTH USER
+      // ==========================================
 
-      const meResponse = await api.get("/auth/me");
+      console.log(
+        "CALLING /auth/me..."
+      );
+
+      const meResponse =
+        await api.get("/auth/me");
 
       console.log(
         "AUTH ME AFTER LOGIN:",
         meResponse.data
       );
 
-      const meData = meResponse.data;
-
-      /* --------------------------------------------------------
-         6. EXTRACT USER
-      -------------------------------------------------------- */
+      const meData =
+        meResponse.data;
 
       const currentUser =
-        meData?.user || meData;
+        meData?.user ||
+        meData;
 
       const organization =
-        meData?.organization || null;
+        meData?.organization ||
+        null;
+
+
+      // ==========================================
+      // 6. GET ACTUAL ORGANIZATION MEMBER
+      // ==========================================
+
+      const member =
+        await getOrganizationMember(
+          currentUser
+        );
+
+
+      // ==========================================
+      // 7. CREATE FINAL USER
+      // ==========================================
+
+      const finalUser = {
+        ...currentUser,
+
+        // THIS IS THE IMPORTANT ID
+        member_id:
+          member?.id || null,
+
+        name:
+          member?.name ||
+          currentUser?.name ||
+          "",
+
+        email:
+          member?.email ||
+          currentUser?.email ||
+          "",
+
+        phone:
+          member?.phone ||
+          currentUser?.phone ||
+          "",
+
+        department:
+          member?.department ||
+          currentUser?.department ||
+          "",
+
+        designation:
+          member?.designation ||
+          currentUser?.designation ||
+          "",
+
+        role:
+          member?.role ||
+          currentUser?.role ||
+          "",
+      };
+
 
       console.log(
-        "CURRENT USER AFTER LOGIN:",
-        currentUser
+        "========== LOGIN USER =========="
       );
 
       console.log(
-        "ORGANIZATION AFTER LOGIN:",
-        organization
+        "AUTH USER ID:",
+        finalUser.id
       );
 
-      /* --------------------------------------------------------
-         7. SAVE USER TO REACT STATE
-      -------------------------------------------------------- */
+      console.log(
+        "ORGANIZATION MEMBER ID:",
+        finalUser.member_id
+      );
 
-      setUser(currentUser);
+      console.log(
+        "NAME:",
+        finalUser.name
+      );
+
+      console.log(
+        "EMAIL:",
+        finalUser.email
+      );
+
+      console.log(
+        "ROLE:",
+        finalUser.role
+      );
+
+      console.log(
+        "================================"
+      );
+
+
+      // ==========================================
+      // 8. SAVE USER
+      // ==========================================
+
+      setUser(finalUser);
       setOrg(organization);
 
-      console.log("USER STATE UPDATED");
-      console.log("LOGIN COMPLETE");
+      console.log(
+        "USER STATE UPDATED"
+      );
+
+      console.log(
+        "LOGIN COMPLETE"
+      );
+
 
       return {
         ...data,
         token,
-        user: currentUser,
+        user: finalUser,
         organization,
       };
-    } catch (error) {
-      console.error("=================================");
-      console.error("ADMIN LOGIN ERROR");
-      console.error("=================================");
 
-      console.error("ERROR:", error);
-      console.error("STATUS:", error.response?.status);
-      console.error("RESPONSE:", error.response?.data);
-      console.error("MESSAGE:", error.message);
+    } catch (error) {
+      console.error(
+        "================================="
+      );
+
+      console.error(
+        "ADMIN LOGIN ERROR"
+      );
+
+      console.error(
+        "================================="
+      );
+
+      console.error(
+        "ERROR:",
+        error
+      );
+
+      console.error(
+        "STATUS:",
+        error.response?.status
+      );
+
+      console.error(
+        "RESPONSE:",
+        error.response?.data
+      );
+
+      console.error(
+        "MESSAGE:",
+        error.message
+      );
 
       throw error;
     }
   };
+
 
   /* ============================================================
      LOGOUT
@@ -220,24 +580,37 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post(
+        "/auth/logout"
+      );
     } catch (error) {
-      console.error("Logout API error:", error);
+      console.error(
+        "Logout API error:",
+        error
+      );
     }
 
-    localStorage.removeItem("mm_token");
-    sessionStorage.removeItem("mm_token");
+    localStorage.removeItem(
+      "mm_token"
+    );
+
+    sessionStorage.removeItem(
+      "mm_token"
+    );
 
     setUser(null);
     setOrg(null);
   };
+
 
   /* ============================================================
      PERMISSIONS
   ============================================================ */
 
   const can = (perm) =>
-    (user?.permissions || []).includes(perm);
+    (user?.permissions || [])
+      .includes(perm);
+
 
   /* ============================================================
      PROVIDER
@@ -261,4 +634,5 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () =>
+  useContext(AuthContext);

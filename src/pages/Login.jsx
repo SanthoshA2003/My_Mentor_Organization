@@ -99,10 +99,10 @@ const submit = async (e) => {
             </button>
           </form>
 
-          <div className="mt-6 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500">
+          {/* <div className="mt-6 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500">
             <p className="font-semibold text-slate-600 mb-1">Demo admin</p>
             rajeshkumar@suveragroups.com / Admin@12345
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
