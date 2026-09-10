@@ -73,6 +73,19 @@ const PIPELINE_STAGES = [
   "Rejected",
 ];
 
+const formatStage = (stage) => {
+  if (!stage) return "—";
+
+  if (stage === "submitted") {
+    return "Applied";
+  }
+
+  return stage
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/^Hr Round$/, "HR Round");
+};
+
 export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -848,7 +861,7 @@ console.log("Job keys:", Object.keys(job));
                             )}
                           >
                             {application.ats_score ??
-                              "—"}
+                              "0"}
                           </span>
 
                         </td>
@@ -866,7 +879,7 @@ console.log("Job keys:", Object.keys(job));
                             )}
                           >
                             {application.match_score ??
-                              "—"}
+                              "0"}
                           </span>
 
                         </td>
@@ -882,10 +895,9 @@ console.log("Job keys:", Object.keys(job));
 
                         <td className="px-4 py-3">
 
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                            {application.stage ||
-                              "—"}
-                          </span>
+                         <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+  {formatStage(application.stage)}
+</span>
 
                         </td>
 
@@ -893,67 +905,57 @@ console.log("Job keys:", Object.keys(job));
 
                         <td className="px-4 py-3 text-slate-600 text-xs">
                           {application.recruiter ||
-                            "—"}
+                            "Not Assign"}
                         </td>
 
-                        {/* MOVE */}
+                     {/* MOVE */}
 
-                        <td
-                          className="px-4 py-3"
-                          onClick={(event) =>
-                            event.stopPropagation()
-                          }
-                        >
+<td
+  className="px-4 py-3"
+  onClick={(event) =>
+    event.stopPropagation()
+  }
+>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        size="sm"
+        variant="outline"
+        data-testid={`app-actions-${application.application_id}`}
+      >
+        Move
+      </Button>
+    </DropdownMenuTrigger>
 
-                          {can("move_stage") && (
+    <DropdownMenuContent align="end">
+      {PIPELINE_STAGES
+       .filter((stage) => {
+  const currentStage =
+    application.stage === "submitted"
+      ? "Applied"
+      : application.stage;
 
-                            <DropdownMenu>
-
-                              <DropdownMenuTrigger
-                                asChild
-                              >
-
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  data-testid={`app-actions-${application.application_id}`}
-                                >
-                                  Move
-                                </Button>
-
-                              </DropdownMenuTrigger>
-
-                              <DropdownMenuContent align="end">
-
-                                {PIPELINE_STAGES
-                                  .filter(
-                                    (stage) =>
-                                      stage.toLowerCase() !==
-                                      application.stage?.toLowerCase()
-                                  )
-                                  .map((stage) => (
-
-                                    <DropdownMenuItem
-                                      key={stage}
-                                      onClick={() =>
-                                        moveStage(
-                                          application.application_id,
-                                          stage
-                                        )
-                                      }
-                                    >
-                                      {stage}
-                                    </DropdownMenuItem>
-
-                                  ))}
-
-                              </DropdownMenuContent>
-
-                            </DropdownMenu>
-
-                          )}
-
-                        </td>
+  return (
+    stage.toLowerCase() !==
+    currentStage?.toLowerCase()
+  );
+})
+        .map((stage) => (
+          <DropdownMenuItem
+            key={stage}
+            onClick={() =>
+              moveStage(
+                application.application_id,
+                stage
+              )
+            }
+          >
+            {stage}
+          </DropdownMenuItem>
+        ))}
+    </DropdownMenuContent>
+  </DropdownMenu>
+</td>
 
                       </tr>
 
@@ -1333,14 +1335,12 @@ console.log("Job keys:", Object.keys(job));
 
                         {/* MOVE STAGE */}
 
-                        {can("move_stage") && (
-
-                          <div
-                            onClick={(event) =>
-                              event.stopPropagation()
-                            }
-                            className="mt-2"
-                          >
+                       <div
+  onClick={(event) =>
+    event.stopPropagation()
+  }
+  className="mt-2"
+>
 
                             <DropdownMenu>
 
@@ -1385,8 +1385,6 @@ console.log("Job keys:", Object.keys(job));
                             </DropdownMenu>
 
                           </div>
-
-                        )}
 
                       </Card>
 
