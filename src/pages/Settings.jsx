@@ -11,7 +11,7 @@
   import { Slider } from "@/components/ui/slider";
   import { Switch } from "@/components/ui/switch";
   import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-  import { Check, X, Building2, User, Shield, Bell, Workflow, SlidersHorizontal, Plug } from "lucide-react";
+  import { Check, X, Building2, User, Shield, Bell, Workflow, SlidersHorizontal, Plug, Eye, EyeOff,} from "lucide-react";
   import { toast } from "sonner";
   import { cn } from "@/lib/utils";
   import {
@@ -48,6 +48,8 @@
     const [orgForm, setOrgForm] = useState({});
     const [ats, setAts] = useState(null);
     const [currentMember, setCurrentMember] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 const [acct, setAcct] = useState({
   first_name: "",
@@ -682,37 +684,82 @@ const changePassword = async () => {
     <div className="space-y-4 py-2">
 
       {/* New Password */}
-      <div className="space-y-1.5">
-        <Label>New Password</Label>
+      <div className="relative">
+  <Input
+    type={showPassword ? "text" : "password"}
+    value={passwordForm.password}
+    onChange={(e) =>
+      setPasswordForm({
+        ...passwordForm,
+        password: e.target.value,
+      })
+    }
+    placeholder="Enter new password"
+    className="pr-11"
+  />
 
-        <Input
-          type="password"
-          value={passwordForm.password}
-          onChange={(e) =>
-            setPasswordForm({
-              ...passwordForm,
-              password: e.target.value,
-            })
-          }
-          placeholder="Enter new password"
-        />
-      </div>
+  <button
+    type="button"
+    onClick={() =>
+      setShowPassword((prev) => !prev)
+    }
+    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+    aria-label={
+      showPassword
+        ? "Hide password"
+        : "Show password"
+    }
+  >
+    {showPassword ? (
+      <EyeOff className="h-4 w-4" />
+    ) : (
+      <Eye className="h-4 w-4" />
+    )}
+  </button>
+</div>
+
 
       {/* Confirm Password */}
       <div className="space-y-1.5">
         <Label>Confirm Password</Label>
 
-        <Input
-          type="password"
-          value={passwordForm.confirmPassword}
-          onChange={(e) =>
-            setPasswordForm({
-              ...passwordForm,
-              confirmPassword: e.target.value,
-            })
-          }
-          placeholder="Confirm new password"
-        />
+      <div className="relative">
+  <Input
+    type={
+      showConfirmPassword
+        ? "text"
+        : "password"
+    }
+    value={passwordForm.confirmPassword}
+    onChange={(e) =>
+      setPasswordForm({
+        ...passwordForm,
+        confirmPassword: e.target.value,
+      })
+    }
+    placeholder="Confirm new password"
+    className="pr-11"
+  />
+
+  <button
+    type="button"
+    onClick={() =>
+      setShowConfirmPassword((prev) => !prev)
+    }
+    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+    aria-label={
+      showConfirmPassword
+        ? "Hide confirm password"
+        : "Show confirm password"
+    }
+  >
+    {showConfirmPassword ? (
+      <EyeOff className="h-4 w-4" />
+    ) : (
+      <Eye className="h-4 w-4" />
+    )}
+  </button>
+</div>
       </div>
 
     </div>

@@ -6,12 +6,13 @@ import { LOGO_URL } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Lock, Mail, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, Mail, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const { login, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -84,9 +85,36 @@ const submit = async (e) => {
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input id="password" data-testid="login-password-input" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pl-9 h-11 focus-visible:ring-[#1e5bff]" />
-              </div>
+  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+
+  <Input
+    id="password"
+    data-testid="login-password-input"
+    type={showPassword ? "text" : "password"}
+    required
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    placeholder="••••••••"
+    className="pl-9 pr-11 h-11 focus-visible:ring-[#1e5bff]"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowPassword((prev) => !prev)}
+    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1e5bff] transition-colors"
+    aria-label={
+      showPassword
+        ? "Hide password"
+        : "Show password"
+    }
+  >
+    {showPassword ? (
+      <EyeOff className="h-4 w-4" />
+    ) : (
+      <Eye className="h-4 w-4" />
+    )}
+  </button>
+</div>
             </div>
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
