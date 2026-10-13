@@ -7,8 +7,13 @@ const MYMENTOR_BACKEND_URL =
 const CAREERCOMPASS_BACKEND_URL =
   process.env.REACT_APP_CAREERCOMPASS_BACKEND_URL;
 
-// Default backend
-const BACKEND_URL = MYMENTOR_BACKEND_URL;
+const isLocalhost =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
+
+const BACKEND_URL = isLocalhost
+  ? MYMENTOR_BACKEND_URL
+  : CAREERCOMPASS_BACKEND_URL;
 
 export const API = `${BACKEND_URL}/api`;
 
