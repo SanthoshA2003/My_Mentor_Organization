@@ -1,24 +1,44 @@
+
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const MYMENTOR_BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL;
+
+const CAREERCOMPASS_BACKEND_URL =
+  process.env.REACT_APP_CAREERCOMPASS_BACKEND_URL;
+
+// Default backend
+const BACKEND_URL = MYMENTOR_BACKEND_URL;
 
 export const API = `${BACKEND_URL}/api`;
 
 export const api = axios.create({
   baseURL: API,
+  withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
+// Separate client for CareerCompass backend
+export const careerCompassApi = axios.create({
+  baseURL: `${CAREERCOMPASS_BACKEND_URL}/api`,
+  withCredentials: true,
+});
+
+// Attach token to MyMentor requests
+const attachToken = (config) => {
   const token =
     localStorage.getItem("mm_token") ||
     sessionStorage.getItem("mm_token");
 
   if (token) {
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
-});
+};
+
+api.interceptors.request.use(attachToken);
+careerCompassApi.interceptors.request.use(attachToken);
 
 export function formatApiError(detail) {
   if (detail == null) {
@@ -40,7 +60,7 @@ export function formatApiError(detail) {
       .join(" ");
   }
 
-  if (detail && typeof detail.msg === "string") {
+  if (typeof detail.msg === "string") {
     return detail.msg;
   }
 
