@@ -90,6 +90,51 @@ export default function JobDetail() {
   const [tab, setTab] = useState("overview");
   const [loading, setLoading] = useState(true);
 
+  const [interviewModalOpen, setInterviewModalOpen] = useState(false);
+  const [interviewSaving, setInterviewSaving] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [editingInterview, setEditingInterview] = useState(null);
+  const [interviewers, setInterviewers] = useState([]);
+  const [interviewersLoading, setInterviewersLoading] = useState(false);
+
+  const [interviewForm, setInterviewForm] = useState({
+    interviewer_id: "",
+    title: "",
+    interview_type: "Technical",
+    scheduled_at: "",
+    duration_minutes: 30,
+    mode: "online",
+    meeting_link: "",
+    location: "",
+    notes: "",
+  });
+
+  const updateInterviewField = (field, value) => {
+    setInterviewForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const openScheduleInterview = (application) => {
+    setSelectedApplication(application);
+    setEditingInterview(null);
+
+    setInterviewForm({
+      interviewer_id: "",
+      title: `${application.candidate_name || application.name || "Candidate"} Interview`,
+      interview_type: "Technical",
+      scheduled_at: "",
+      duration_minutes: 30,
+      mode: "online",
+      meeting_link: "",
+      location: "",
+      notes: "",
+    });
+
+    setInterviewModalOpen(true);
+  };
+
   // ============================================================
   // FETCH COMPLETE JOB DETAILS
   // ============================================================
@@ -121,6 +166,50 @@ export default function JobDetail() {
   useEffect(() => {
     loadJob();
   }, [id]);
+
+  useEffect(() => {
+    if (!interviewModalOpen) return;
+
+    let cancelled = false;
+
+    const loadInterviewers = async () => {
+      try {
+        setInterviewersLoading(true);
+
+        const response = await api.get(
+          "/organizations/me/interviews/available-interviewers",
+        );
+
+        if (!cancelled) {
+          setInterviewers(Array.isArray(response.data) ? response.data : []);
+        }
+      } catch (error) {
+        console.error(
+          "Load interviewers error:",
+          error.response?.data || error,
+        );
+
+        if (!cancelled) {
+          setInterviewers([]);
+          toast.error(
+            formatApiError(
+              error.response?.data?.detail || "Unable to load interviewers",
+            ),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setInterviewersLoading(false);
+        }
+      }
+    };
+
+    loadInterviewers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [interviewModalOpen]);
 
   // ============================================================
   // CHANGE JOB STATUS
@@ -161,7 +250,10 @@ export default function JobDetail() {
       await api.put(
         `/organizations/me/jobs/${id}/applications/${applicationId}/move`,
         {
-          status: stage.toLowerCase().replace(/ /g, "_"),
+          status:
+            stage === "Applied"
+              ? "submitted"
+              : stage.toLowerCase().replace(/ /g, "_"),
         },
       );
 
@@ -176,6 +268,77 @@ export default function JobDetail() {
           error.response?.data?.detail || "Unable to move application",
         ),
       );
+    }
+  };
+
+  const saveInterview = async (event) => {
+    event.preventDefault();
+
+    if (!interviewForm.scheduled_at) {
+      toast.error("Please select an interview date and time");
+      return;
+    }
+
+    const selectedInterviewer = interviewers.find(
+      (person) => person.id === interviewForm.interviewer_id,
+    );
+
+    if (!selectedInterviewer) {
+      toast.error("Please select a valid interviewer");
+      return;
+    }
+
+    if (!selectedApplication && !editingInterview) {
+      toast.error("Select a candidate first");
+      return;
+    }
+
+    const payload = {
+      interviewer_id: interviewForm.interviewer_id.trim(),
+      title: interviewForm.title.trim(),
+      interview_type: interviewForm.interview_type,
+      scheduled_at: new Date(interviewForm.scheduled_at).toISOString(),
+      duration_minutes: Number(interviewForm.duration_minutes),
+      mode: interviewForm.mode,
+      meeting_link: interviewForm.meeting_link.trim() || null,
+      location: interviewForm.location.trim() || null,
+      notes: interviewForm.notes.trim() || null,
+    };
+
+    setInterviewSaving(true);
+
+    try {
+      if (editingInterview) {
+        await api.put(
+          `/organizations/me/interviews/${editingInterview.interview_id || editingInterview.id}`,
+          payload,
+        );
+
+        toast.success("Interview rescheduled successfully");
+      } else {
+        await api.post("/organizations/me/interviews", {
+          ...payload,
+          application_id: selectedApplication.application_id,
+        });
+
+        toast.success("Interview scheduled successfully");
+      }
+
+      setInterviewModalOpen(false);
+      setSelectedApplication(null);
+      setEditingInterview(null);
+
+      await loadJob();
+    } catch (error) {
+      console.error("Save interview error:", error.response?.data || error);
+
+      toast.error(
+        formatApiError(
+          error.response?.data?.detail || "Unable to save interview",
+        ),
+      );
+    } finally {
+      setInterviewSaving(false);
     }
   };
 
@@ -335,7 +498,13 @@ export default function JobDetail() {
 
             <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 flex-wrap">
               {/* Job ID */}
-              <span>{job.job_id || job.id || "—"}</span>
+              <span>
+                {job.job_code ||
+                  job.job_number ||
+                  job.display_id ||
+                  job.job_id ||
+                  "—"}
+              </span>
 
               {/* Department */}
               <span className="flex items-center gap-1">
@@ -736,6 +905,14 @@ export default function JobDetail() {
                               ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
+                          <Button
+                            size="sm"
+                            className="ml-2 bg-[#1e5bff] hover:bg-[#154cdb]"
+                            onClick={() => openScheduleInterview(application)}
+                          >
+                            <CalendarClock className="mr-1 h-4 w-4" />
+                            Schedule
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -1057,6 +1234,7 @@ export default function JobDetail() {
                         "Interviewer",
                         "Scheduled",
                         "Status",
+                        "Actions",
                       ].map((header) => (
                         <th
                           key={header}
@@ -1102,6 +1280,46 @@ export default function JobDetail() {
                                 : "active"
                             }
                           />
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedApplication({
+                                application_id: interview.application_id,
+                                candidate_name: interview.candidate_name,
+                              });
+
+                              setEditingInterview(interview);
+
+                              setInterviewForm({
+                                interviewer_id: interview.interviewer_id || "",
+                                title: interview.title || "",
+                                interview_type:
+                                  interview.interview_type ||
+                                  interview.type ||
+                                  "Technical",
+                                scheduled_at: interview.scheduled_at
+                                  ? new Date(interview.scheduled_at)
+                                      .toISOString()
+                                      .slice(0, 16)
+                                  : "",
+                                duration_minutes:
+                                  interview.duration_minutes || 30,
+                                mode: interview.mode || "online",
+                                meeting_link: interview.meeting_link || "",
+                                location: interview.location || "",
+                                notes: interview.notes || "",
+                              });
+
+                              setInterviewModalOpen(true);
+                            }}
+                          >
+                            <CalendarClock className="mr-1 h-4 w-4" />
+                            Reschedule
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -1166,6 +1384,174 @@ export default function JobDetail() {
             score is {analytics.avg_ats_score ?? 0}.
           </Card>
         </TabsContent>
+
+        {interviewModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <form
+  onSubmit={saveInterview}
+  className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl space-y-3"
+>
+              <h2 className="text-xl font-bold">
+                {editingInterview
+                  ? "Reschedule Interview"
+                  : "Schedule Interview"}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+
+              <label className="block text-sm font-medium">
+                Interviewer <span className="text-red-500">*</span>
+                <select
+                  required
+                  disabled={interviewersLoading}
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white p-2.5"
+                  value={interviewForm.interviewer_id}
+                  onChange={(event) =>
+                    updateInterviewField("interviewer_id", event.target.value)
+                  }
+                >
+                  <option value="">
+                    {interviewersLoading
+                      ? "Loading interviewers..."
+                      : "Select an interviewer"}
+                  </option>
+
+                  {interviewers.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name}
+                      {person.designation ? ` — ${person.designation}` : ""}
+                      {person.department ? ` (${person.department})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {!interviewersLoading && interviewers.length === 0 && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    No eligible interviewers found for your organization.
+                  </p>
+                )}
+              </label>
+
+              <label className="block text-sm">
+                Interview Title
+                <input
+                  required
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.title}
+                  onChange={(e) =>
+                    updateInterviewField("title", e.target.value)
+                  }
+                />
+              </label>
+
+              <label className="block text-sm">
+                Interview Type
+                <select
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.interview_type}
+                  onChange={(e) =>
+                    updateInterviewField("interview_type", e.target.value)
+                  }
+                >
+                  <option value="technical">Technical</option>
+                  <option value="hr">HR</option>
+                  <option value="culture_fit">Culture Fit</option>
+                  <option value="screening">Screening</option>
+                </select>
+              </label>
+
+              <label className="block text-sm">
+                Date and Time
+                <input
+                  type="datetime-local"
+                  required
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.scheduled_at}
+                  onChange={(e) =>
+                    updateInterviewField("scheduled_at", e.target.value)
+                  }
+                />
+              </label>
+
+              <label className="block text-sm">
+                Duration (minutes)
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.duration_minutes}
+                  onChange={(e) =>
+                    updateInterviewField("duration_minutes", e.target.value)
+                  }
+                />
+              </label>
+
+              <label className="block text-sm">
+                Mode
+                <select
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.mode}
+                  onChange={(e) => updateInterviewField("mode", e.target.value)}
+                >
+                  <option value="online">Online</option>
+                  <option value="onsite">On-site</option>
+                  <option value="phone">Phone</option>
+                </select>
+              </label>
+
+              <label className="block text-sm">
+                Meeting Link
+                <input
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.meeting_link}
+                  onChange={(e) =>
+                    updateInterviewField("meeting_link", e.target.value)
+                  }
+                />
+              </label>
+
+              <label className="block text-sm">
+                Notes
+                <textarea
+                  className="mt-1 w-full rounded border p-2"
+                  value={interviewForm.notes}
+                  onChange={(e) =>
+                    updateInterviewField("notes", e.target.value)
+                  }
+                />
+              </label>
+              
+</div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setInterviewModalOpen(false);
+                    setEditingInterview(null);
+                    setSelectedApplication(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    interviewSaving ||
+                    interviewersLoading ||
+                    interviewers.length === 0
+                  }
+                >
+                  {interviewSaving
+                    ? "Saving..."
+                    : editingInterview
+                      ? "Reschedule Interview"
+                      : "Schedule Interview"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
       </Tabs>
     </div>
   );

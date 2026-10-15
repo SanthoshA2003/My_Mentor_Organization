@@ -21,6 +21,11 @@ export default function Interviews() {
   try {
     const response = await api.get("/organizations/me/interviews");
 
+    console.log(
+  "Interview API response:",
+  JSON.stringify(response.data, null, 2)
+);
+
     console.log("Organization Interviews API:", response.data);
 
     setIvs(Array.isArray(response.data) ? response.data : []);
